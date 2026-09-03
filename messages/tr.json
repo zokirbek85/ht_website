@@ -1,0 +1,213 @@
+{
+  "meta": {
+    "siteName": "Hazorasp-Textil",
+    "titleSuffix": "Hazorasp-Textil MCHJ",
+    "homeTitle": "Hazorasp-Textil | Özbek Pamuk İpliği Üreticisi ve İhracatçısı",
+    "homeDescription": "Hazorasp-Textil LLC, örgü için %100 Özbek pamuklu kardeli ring iplik üreten, 2017 yılında Harezm bölgesi Hazarasp ilçesinde kurulmuş doğrudan bir üreticidir. Aylık 400 tona varan kapasitesiyle uluslararası tekstil pazarlarına tedarik sağlıyoruz."
+  },
+  "nav": {
+    "about": "Hakkımızda",
+    "production": "Üretim",
+    "products": "Ürünler",
+    "quality": "Kalite",
+    "export": "İhracat",
+    "sustainability": "Sürdürülebilirlik",
+    "news": "Haberler",
+    "contact": "İletişim",
+    "contactCta": "Bize Ulaşın",
+    "skipToContent": "İçeriğe geç",
+    "toggleMenu": "Menüyü aç/kapat"
+  },
+  "hero": {
+    "eyebrow": "Hazorasp-Textil MCHJ — Harezm, Özbekistan",
+    "titleLine1": "Özbek Pamuğundan",
+    "titleLine2": "Yüksek Kaliteli İpliğe",
+    "sub": "Uluslararası tekstil ortaklarının aradığı standartlara göre kurulmuş bir pamuk ipliği üreticisi — elyaf kabulünden bitmiş koniye kadar.",
+    "ctaPrimary": "Bize Ulaşın",
+    "ctaSecondary": "Ürün Kataloğu İsteyin",
+    "scrollLabel": "Kaydır"
+  },
+  "stats": {
+    "yearsLabel": "Yıllık deneyim",
+    "items": [
+      { "value": 400, "suffix": " ton", "label": "Aylık kapasite" },
+      { "value": 5, "suffix": "", "label": "İplik numarası (Ne)" },
+      { "value": 3, "suffix": "", "label": "İhracat pazarı" },
+      { "value": 100, "suffix": "%", "label": "Özbek pamuğu" }
+    ]
+  },
+  "about": {
+    "sectionNum": "02 / Şirket hakkında",
+    "eyebrow": "Şirket hakkında",
+    "title": "Özbekistan'ın tekstil sanayisini büyütmek için kuruldu",
+    "lede": "Hazorasp-Textil LLC, örgü için %100 pamuklu kardeli ring iplik üreten, 2017 yılında Harezm bölgesi Hazarasp ilçesinde kurulmuş doğrudan bir üreticidir.",
+    "historyTitle": "Tarihçe",
+    "history": "Hazorasp-Textil LLC, yerel olarak yetiştirilen pamuğu yüksek değerli ipliğe dönüştürerek Özbekistan'ın tekstil sanayisini geliştirmek amacıyla 2017 yılında kuruldu. Şirket, aylık 400 tona varan kapasitesiyle doğrudan üretici olarak örgü uygulamaları için kardeli ring iplik üretip uluslararası pazarlara tedarik sağlamaktadır.",
+    "missionTitle": "Misyon",
+    "mission": "Modern teknoloji kullanarak yerel pamuğu yüksek kaliteli ipliğe dönüştürmek, müşterilerimize güvenilir, tutarlı ve uluslararası standartlara uygun ürünler sunmak — ve Özbekistan'ın tekstil sanayisinin gelişimine anlamlı katkı sağlamak.",
+    "visionTitle": "Vizyon",
+    "vision": "Modern bir üretim kültürüyle ihracat kapasitemizi genişleterek ve uluslararası pazarlarda tanınan, köklü bir ulusal marka inşa ederek Orta Asya'nın en güvenilir ve yenilikçi iplik üreticilerinden biri olmak.",
+    "quote": "Faaliyetlerimizi yüksek kalite, modern teknoloji ve karşılıklı güven ilkeleri üzerine yürütüyoruz.",
+    "quoteAuthor": "Genel Müdür, Hazorasp-Textil MCHJ",
+    "ceoMessageTitle": "Genel Müdürden Mesaj",
+    "ceoMessage": "Değerli ortaklarımız ve müşterilerimiz,\n\nHazorasp-Textil ekibi adına sizleri selamlıyorum.\n\nFaaliyetlerimizi yüksek kalite, modern teknoloji ve karşılıklı güven ilkeleri üzerine yürütüyoruz. Her ortağımızla uzun vadeli, istikrarlı ilişkiler kurmak kendimize koyduğumuz bir hedeftir. Kaliteli ürünler, sorumlu bir yaklaşım ve sürekli yenilik sayesinde hem Özbekistan'da hem de uluslararası pazarlarda güvenilir bir ortak olmaya devam edeceğimize inanıyoruz.",
+    "values": [
+      { "title": "Kalite Mükemmelliği", "desc": "Her üründe yüksek kalite standartlarını korumak." },
+      { "title": "Güvenilirlik", "desc": "Müşterilere ve ortaklara verilen taahhütleri zamanında yerine getirmek." },
+      { "title": "Dürüstlük", "desc": "Dürüstlük, şeffaflık ve sağlam iş etiğiyle hareket etmek." },
+      { "title": "Yenilikçilik", "desc": "Üretim ve yönetimde modern teknolojiyi hayata geçirmek." },
+      { "title": "Sürdürülebilirlik", "desc": "Kaynakları verimli kullanmak ve çevresel sorumlulukla hareket etmek." },
+      { "title": "Ortaklık", "desc": "Uzun vadeli, karşılıklı fayda sağlayan iş birlikleri kurmak." },
+      { "title": "Önce İnsan", "desc": "Çalışanlarımızın güvenliğini, gelişimini ve mesleki ilerlemesini desteklemek." }
+    ]
+  },
+  "production": {
+    "sectionNum": "03 / Üretim süreci",
+    "eyebrow": "Üretim süreci",
+    "title": "Ham koza pamuğundan bitmiş koniye",
+    "lede": "Elyaf bir sonraki aşamaya geçmeden önce kaydedilen ve test edilen altı kontrollü aşama.",
+    "steps": [
+      { "index": "01", "title": "Pamuk Kabulü", "desc": "Bölgesel çırçır fabrikalarından gelen ham pamuk kabul edilir, tartılır ve elyaf partisine göre sınıflandırılır.", "tech": "Parti izlenebilirliği kaydedilir" },
+      { "index": "02", "title": "Temizleme", "desc": "Blow room hatları açma öncesinde çöp, tohum kabuğu ve kısa elyafı ayıklar.", "tech": "Çok aşamalı blow room" },
+      { "index": "03", "title": "Elyaf Hazırlığı", "desc": "Karde ve çekme işlemleri elyafı düzgün, kontrollü bir tarak şeridine dönüştürür.", "tech": "Karde + çekme makinesi" },
+      { "index": "04", "title": "Eğirme", "desc": "Eğirme makineleri tarak şeridini belirlenen numarada ipliğe büker.", "tech": "Kardeli eğirme" },
+      { "index": "05", "title": "Kalite Kontrol", "desc": "Her parti, sevkiyattan önce mukavemet, düzgünlük ve numara açısından test edilir.", "tech": "İstatistiksel kalite kıyaslaması" },
+      { "index": "06", "title": "Bitmiş İplik", "desc": "Alıcının sevkiyat şartnamesine göre sarma, kondisyonlama ve paketleme.", "tech": "Koni / çile paketleme" }
+    ]
+  },
+  "products": {
+    "sectionNum": "04 / Ürünler",
+    "eyebrow": "Ürünler",
+    "title": "Şartnamenize göre üretilen iplik",
+    "lede": "Şu anda üretimde: örgü için %100 pamuklu kardeli ring iplik. Mevcut numaralar Ne 20/1, 24/1, 26/1, 28/1 ve 30/1. Alıcı onayı için 20–50 kg numuneler mevcuttur.",
+    "specLabels": {
+      "count": "Numara",
+      "composition": "İçerik",
+      "strength": "Mukavemet",
+      "twist": "Büküm",
+      "packaging": "Paketleme",
+      "application": "Kullanım Alanı"
+    },
+    "actions": {
+      "spec": "Teknik Föy (PDF)",
+      "quote": "Teklif İsteyin"
+    },
+    "items": [
+      {
+        "slug": "carded-knitting",
+        "tag": "Kardeli · Örgü",
+        "name": "Kardeli Pamuk İpliği",
+        "desc": "Örgü uygulamaları için üretilen, beş standart numarada mevcut %100 pamuklu kardeli ring iplik.",
+        "count": "Ne 20/1, 24/1, 26/1, 28/1, 30/1",
+        "composition": "%100 Pamuk",
+        "strength": "Talep üzerine",
+        "twist": "Talep üzerine",
+        "packaging": "2,4 kg koni; PP çuvalda 24 koni; çuval başına 57,6 kg net",
+        "application": "Örme Kumaş"
+      }
+    ]
+  },
+  "quality": {
+    "sectionNum": "05 / Kalite kontrol",
+    "eyebrow": "Kalite kontrol",
+    "title": "Sorgulanmadan önce test edilir, sonra değil",
+    "lede": "Elyaf ve iplik, bir parti serbest bırakılmadan önce hattın her aşamasında kontrol edilir.",
+    "items": [
+      { "title": "Elyaf testi (HVI)", "desc": "Gelen pamuk üretime girmeden önce mikroner, uzunluk, mukavemet ve renk derecesi açısından ölçülür." },
+      { "title": "İplik mukavemeti ve düzgünlüğü", "desc": "Numara, mukavemet, uzama ve düzgünlük, tanınmış istatistiksel referans değerlere göre ölçülür." },
+      { "title": "Nem ve kondisyonlama", "desc": "İplik, son tartım ve paketlemeden önce standart atmosfer koşullarında kondisyonlanır." },
+      { "title": "Kontaminasyon kontrolü", "desc": "Blow room ve sarma aşamalarında yabancı elyaf tespiti, aşağı akış kumaş kalitesini korur." }
+    ],
+    "certPanelTitle": "Kalite güvence uygulamaları",
+    "certs": [
+      { "name": "Kalite yönetimi", "desc": "Her üretim aşamasında yapılandırılmış kalite kontrolü" },
+      { "name": "Ürün uyumluluğu", "desc": "Uluslararası tekstil uygulamalarına uygun test prosedürleri" },
+      { "name": "Parti izlenebilirliği", "desc": "Her parti için tarladan koniye kayıt tutulur" },
+      { "name": "Sürekli iyileştirme", "desc": "Tutarlılığı artırmak için ekipman ve süreçler güncellenir" }
+    ]
+  },
+  "export": {
+    "sectionNum": "06 / İhracat ve iş birliği",
+    "eyebrow": "İhracat ve iş birliği",
+    "title": "Özbekistan'dan güvenilir tekstil ortağı",
+    "copy": "Hazorasp-Textil, Türkiye, Çin ve Hindistan dahil olmak üzere uluslararası tekstil pazarlarına tedarik sağlamaktadır. Örgü fabrikaları, tekstil işletmeleri, iplik ithalatçıları ve distribütörleriyle uzun vadeli ortaklıklarla ilgileniyoruz.",
+    "markets": ["Türkiye", "Çin", "Hindistan"],
+    "origin": "Özbekistan",
+    "stats": [
+      { "value": 400, "suffix": " ton", "label": "Aylık kapasite" },
+      { "value": 100, "suffix": "%", "label": "Pamuk oranı" }
+    ],
+    "cta": "İhracat siparişini görüşün",
+    "catalogCta": "Kataloğu indirin",
+    "certifications": "Sertifikalar ve kalite belgeleri"
+  },
+  "sustainability": {
+    "sectionNum": "07 / Sürdürülebilirlik",
+    "eyebrow": "Sürdürülebilirlik",
+    "title": "Sloganla değil, süreçle sorumlu",
+    "lede": "Kaynak kullanımı ve atık yönetimi, sonradan akla gelen değil, fabrikanın işletilme biçiminin bir parçasıdır.",
+    "items": [
+      { "title": "Su yönetimi", "desc": "Üretim genelinde suya duyarlı uygulamalar benimsenmiş olup, faaliyetler büyüdükçe ek verimlilik önlemleri planlanmaktadır." },
+      { "title": "Enerji verimliliği", "desc": "Ekipman ve süreçler enerji verimliliği gözetilerek seçilir, mümkün olan yerde tüketim azaltılır." },
+      { "title": "Sorumlu tedarik", "desc": "Pamuk yan ürünleri ve üretim atıkları çöpe atılmak yerine sorumlu bir şekilde yönetilir." }
+    ]
+  },
+  "news": {
+    "sectionNum": "08 / Haberler ve medya",
+    "eyebrow": "Haberler ve medya",
+    "title": "Fabrika sahasından",
+    "allLink": "Tüm haberler",
+    "readMore": "Devamını oku",
+    "items": [
+      { "slug": "carded-line-update", "category": "Üretim", "title": "Kardeli iplik hattı artık beş standart numarada çalışıyor", "excerpt": "Ne 20/1, 24/1, 26/1, 28/1 ve 30/1 kardeli ring pamuk ipliği örgü için mevcuttur.", "date": "2026-06-10" },
+      { "slug": "export-growth", "category": "İhracat", "title": "Hazorasp-Textil üç pazarda ihracat ortaklıkları geliştiriyor", "excerpt": "Şirket, Türkiye, Çin ve Hindistan'da uzun vadeli tedarik ortaklıkları geliştiriyor.", "date": "2026-05-05" },
+      { "slug": "quality-process", "category": "Kalite", "title": "Kendi laboratuvarı parti bazlı testleri güçlendiriyor", "excerpt": "Her aşamadaki elyaf ve iplik testleri artık serbest bırakılmadan önce tüm üretim partilerini kapsıyor.", "date": "2026-03-18" }
+    ]
+  },
+  "contact": {
+    "sectionNum": "09 / İletişim",
+    "eyebrow": "İletişim",
+    "title": "Görüşmeye başlayın",
+    "lede": "İhtiyacınızı iletin, bir satış mühendisi bir iş günü içinde size dönüş yapsın.",
+    "info": {
+      "officeTitle": "Merkez ofis",
+      "office": "45 Mustaqillik Caddesi, Hazarasp ilçesi, Harezm bölgesi, Özbekistan",
+      "salesTitle": "Satış ve ihracat",
+      "email": "ahmadjonbotirov593@gmail.com",
+      "phone": "+998 97 747 63 06",
+      "hoursTitle": "Çalışma saatleri",
+      "hours": "09:00–18:00 (GMT+5)",
+      "langTitle": "Diller",
+      "langs": "English · Русский · O'zbekcha · Türkçe"
+    },
+    "form": {
+      "company": "Şirket adı",
+      "country": "Ülke",
+      "person": "İlgili kişi",
+      "email": "E-posta",
+      "phone": "Telefon",
+      "product": "İlgilenilen ürün",
+      "productOptions": ["Kardeli Pamuk İpliği (Örgü)", "Henüz emin değilim"],
+      "volume": "Gerekli hacim (ton / ay)",
+      "volumePlaceholder": "örn. 50–100 ton/ay",
+      "message": "Mesaj",
+      "messagePlaceholder": "İhtiyacınızı bize anlatın...",
+      "submit": "Talebi Gönder",
+      "submitted": "Talep alındı",
+      "note": "Ya da basılabilir ürün kataloğu (PDF) talep edin.",
+      "errors": {
+        "required": "Bu alan zorunludur",
+        "email": "Geçerli bir e-posta adresi girin"
+      }
+    }
+  },
+  "footer": {
+    "tagline": "Harezm, Özbekistan'da pamuk işleme ve iplik üretimi — uluslararası ihracat ortakları için kuruldu.",
+    "companyTitle": "Şirket",
+    "productsTitle": "Ürünler",
+    "resourcesTitle": "Kaynaklar",
+    "requestCatalog": "Katalog İsteyin",
+    "certificates": "Kalite ve Sertifikalar",
+    "rights": "Tüm hakları saklıdır."
+  }
+}

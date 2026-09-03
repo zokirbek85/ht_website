@@ -33,6 +33,16 @@
         "twist": "So'rov asosida",
         "packaging": "2,4 kg bobina; PP qopda 24 ta bobina; har qopda 57,6 kg sof og'irlik",
         "application": "Trikotaj"
+      },
+      "tr": {
+        "tag": "Kardeli · Örgü",
+        "name": "Kardeli Pamuk İpliği",
+        "desc": "Örgü uygulamaları için üretilen, beş standart numarada mevcut %100 pamuklu kardeli ring iplik.",
+        "composition": "%100 Pamuk",
+        "strength": "Talep üzerine",
+        "twist": "Talep üzerine",
+        "packaging": "2,4 kg koni; PP çuvalda 24 koni; çuval başına 57,6 kg net",
+        "application": "Örme Kumaş"
       }
     }
   }

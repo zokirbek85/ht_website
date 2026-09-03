@@ -4,7 +4,7 @@ import { useLocale } from "next-intl";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 
-const LABELS: Record<string, string> = { en: "EN", ru: "RU", uz: "UZ" };
+const LABELS: Record<string, string> = { en: "EN", ru: "RU", uz: "UZ", tr: "TR" };
 
 export function LangSwitch({ className }: { className?: string }) {
   const locale = useLocale();

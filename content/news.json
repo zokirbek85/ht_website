@@ -18,6 +18,11 @@
         "category": "Ishlab chiqarish",
         "title": "Kardali ip liniyasi beshta standart nomerda ishlamoqda",
         "excerpt": "Trikotaj uchun Ne 20/1, 24/1, 26/1, 28/1 va 30/1 kardali halqali yigirilgan paxta ipi mavjud."
+      },
+      "tr": {
+        "category": "Üretim",
+        "title": "Kardeli iplik hattı artık beş standart numarada çalışıyor",
+        "excerpt": "Ne 20/1, 24/1, 26/1, 28/1 ve 30/1 kardeli ring pamuk ipliği örgü için mevcuttur."
       }
     }
   },
@@ -40,6 +45,11 @@
         "category": "Eksport",
         "title": "Hazorasp-Textil uchta bozorda eksport hamkorligini rivojlantirmoqda",
         "excerpt": "Korxona Turkiya, Xitoy va Hindistonda uzoq muddatli yetkazib berish hamkorligini rivojlantirmoqda."
+      },
+      "tr": {
+        "category": "İhracat",
+        "title": "Hazorasp-Textil üç pazarda ihracat ortaklıkları geliştiriyor",
+        "excerpt": "Şirket, Türkiye, Çin ve Hindistan'da uzun vadeli tedarik ortaklıkları geliştiriyor."
       }
     }
   },
@@ -62,6 +72,11 @@
         "category": "Sifat nazorati",
         "title": "Ichki laboratoriya har bir partiyani tekshirishni kuchaytirdi",
         "excerpt": "Har bir bosqichdagi tola va ip testlari endi chiqarilishdan oldin barcha ishlab chiqarish partiyalarini qamrab oladi."
+      },
+      "tr": {
+        "category": "Kalite",
+        "title": "Kendi laboratuvarı parti bazlı testleri güçlendiriyor",
+        "excerpt": "Her aşamadaki elyaf ve iplik testleri artık serbest bırakılmadan önce tüm üretim partilerini kapsıyor."
       }
     }
   }
