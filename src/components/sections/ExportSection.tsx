@@ -9,6 +9,7 @@ export function ExportSection({ certificates = [] }: { certificates?: MediaItem[
   const t = useTranslations("export");
   const stats = t.raw("stats") as { value: number; suffix?: string; label: string }[];
   const markets = t.raw("markets") as string[];
+  const origin = { x: 282, y: 312 };
 
   return (
     <section id="export" className="bg-[var(--bg-sunken)] py-16 sm:py-24">
@@ -57,21 +58,23 @@ export function ExportSection({ certificates = [] }: { certificates?: MediaItem[
               <path d="M20 390H773" strokeDasharray="2 8" />
             </g>
             <g stroke="var(--accent-2)" strokeWidth="1.8" fill="none" strokeDasharray="4 5">
-              <path d="M650 252 Q 390 170 112 122" />
-              <path d="M650 252 Q 710 180 766 158" />
-              <path d="M650 252 Q 690 355 716 470" />
+              <path d={`M${origin.x} ${origin.y} Q 210 190 112 122`} />
+              <path d={`M${origin.x} ${origin.y} Q 530 190 766 158`} />
+              <path d={`M${origin.x} ${origin.y} Q 500 360 716 470`} />
             </g>
-            <g fill="var(--forest)" opacity="0.92" stroke="var(--accent-2)" strokeWidth="1.2">
-              {uzbekistanMap.locations.map((location: { id: string; path: string }) => <path key={location.id} d={location.path} />)}
+            <g opacity="0.92" stroke="var(--accent-2)" strokeWidth="1.2">
+              {uzbekistanMap.locations.map((location: { id: string; path: string }) => (
+                <path key={location.id} d={location.path} fill={location.id === "xorazm" ? "var(--brass)" : "var(--forest)"} />
+              ))}
             </g>
             <g fill="var(--brass)" stroke="var(--bg-sunken)" strokeWidth="3">
-              <circle cx="650" cy="252" r="7" />
+              <circle cx={origin.x} cy={origin.y} r="7" />
               <circle cx="112" cy="122" r="5" />
               <circle cx="766" cy="158" r="5" />
               <circle cx="716" cy="470" r="5" />
             </g>
             <g fontFamily="var(--font-plex-mono)" fontSize="11" fill="var(--text)" fontWeight="600">
-              <text x="603" y="285">{t("origin")}</text>
+              <text x="235" y="350">{t("origin")}</text>
               <text x="78" y="105">{markets[0] ?? ""}</text>
               <text x="700" y="140">{markets[1] ?? ""}</text>
               <text x="726" y="492">{markets[2] ?? ""}</text>
