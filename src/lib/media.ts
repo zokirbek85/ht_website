@@ -22,9 +22,22 @@ export type MediaItem = {
 const DATA_FILE = path.join(process.cwd(), "content", "media.json");
 const UPLOAD_ROOT = path.join(process.cwd(), "public", "uploads");
 
-const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/svg+xml", "application/pdf"]);
+const ALLOWED_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/svg+xml",
+  "image/x-adobe-dng",
+  "image/dng",
+  "application/dng",
+  "application/pdf"
+]);
 const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 const COMPRESSIBLE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+function isAllowedFile(file: File): boolean {
+  return ALLOWED_TYPES.has(file.type) || path.extname(file.name).toLowerCase() === ".dng";
+}
 
 export async function listMedia(): Promise<MediaItem[]> {
   try {
@@ -98,8 +111,8 @@ export async function uploadMediaFile(
   if (!MEDIA_CATEGORIES.includes(category)) {
     return { ok: false, error: "Invalid category" };
   }
-  if (!ALLOWED_TYPES.has(file.type)) {
-    return { ok: false, error: "Unsupported file type. Use JPG, PNG, WEBP, SVG or PDF." };
+  if (!isAllowedFile(file)) {
+    return { ok: false, error: "Unsupported file type. Use JPG, PNG, WEBP, SVG, DNG or PDF." };
   }
   const prepared = await prepareFile(file);
   if ("error" in prepared) return { ok: false, error: prepared.error };
@@ -146,8 +159,8 @@ export async function updateMediaFile(
 
   let prepared: PreparedFile | undefined;
   if (file && file.size > 0) {
-    if (!ALLOWED_TYPES.has(file.type)) {
-      return { ok: false, error: "Unsupported file type. Use JPG, PNG, WEBP, SVG or PDF." };
+    if (!isAllowedFile(file)) {
+      return { ok: false, error: "Unsupported file type. Use JPG, PNG, WEBP, SVG, DNG or PDF." };
     }
     const result = await prepareFile(file);
     if ("error" in result) return { ok: false, error: result.error };

@@ -38,7 +38,7 @@ export function MediaEditForm({ id, category, title }: { id: string; category: M
       </label>
       <label className="font-mono text-[0.66rem] uppercase tracking-wide text-[var(--text-soft)]">
         Replace file (optional)
-        <input name="file" type="file" accept="image/jpeg,image/png,image/webp,image/svg+xml,application/pdf" className="mt-1 w-full text-[0.75rem]" />
+        <input name="file" type="file" accept="image/jpeg,image/png,image/webp,image/svg+xml,image/x-adobe-dng,image/dng,application/dng,.dng,application/pdf" className="mt-1 w-full text-[0.75rem]" />
       </label>
       {state.error && <p className="text-[0.76rem] text-red-600">{state.error}</p>}
       {state.success && <p className="text-[0.76rem] text-forest">Updated.</p>}

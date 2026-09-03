@@ -58,14 +58,14 @@ export function MediaUploadForm() {
 
       <div className="flex flex-col gap-2">
         <label htmlFor="file" className="font-mono text-[0.68rem] uppercase tracking-wide text-[var(--text-soft)]">
-          File — JPG, PNG, WEBP, SVG or PDF, up to 10MB
+          File — JPG, PNG, WEBP, SVG, DNG or PDF, up to 10MB
         </label>
         <input
           id="file"
           name="file"
           type="file"
           required
-          accept="image/jpeg,image/png,image/webp,image/svg+xml,application/pdf"
+          accept="image/jpeg,image/png,image/webp,image/svg+xml,image/x-adobe-dng,image/dng,application/dng,.dng,application/pdf"
           className="rounded-s border border-dashed border-[var(--border-strong)] bg-transparent px-4 py-3 text-[0.85rem] file:mr-4 file:rounded-s file:border-0 file:bg-forest file:px-3 file:py-1.5 file:text-[0.75rem] file:text-white"
         />
       </div>
