@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@svg-maps/uzbekistan": "^2.0.0",
+    "@swc/helpers": "^0.5.23",
     "next": "16.2.10",
     "next-intl": "^4.13.2",
     "react": "^19.2.7",
