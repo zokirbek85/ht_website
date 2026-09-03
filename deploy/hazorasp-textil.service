@@ -1,0 +1,17 @@
+[Unit]
+Description=Hazorasp-Textil Next.js website
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/hazorasp-textil
+Environment=NODE_ENV=production
+EnvironmentFile=/var/www/hazorasp-textil/.env.local
+ExecStart=/usr/bin/npm run start
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
