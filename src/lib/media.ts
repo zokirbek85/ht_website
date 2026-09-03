@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
+import sharp from "sharp";
 import { MEDIA_CATEGORIES, type MediaCategory } from "./media-constants";
 
 export { MEDIA_CATEGORIES };
@@ -23,6 +24,7 @@ const UPLOAD_ROOT = path.join(process.cwd(), "public", "uploads");
 
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/svg+xml", "application/pdf"]);
 const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+const COMPRESSIBLE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 export async function listMedia(): Promise<MediaItem[]> {
   try {
@@ -52,6 +54,42 @@ function sanitizeFilename(name: string): string {
 
 export type UploadResult = { ok: true; item: MediaItem } | { ok: false; error: string };
 
+type PreparedFile = { buffer: Buffer; filename: string; mimeType: string; size: number };
+
+async function prepareFile(file: File): Promise<PreparedFile | { error: string }> {
+  if (file.size <= MAX_SIZE_BYTES) {
+    return {
+      buffer: Buffer.from(await file.arrayBuffer()),
+      filename: file.name,
+      mimeType: file.type,
+      size: file.size
+    };
+  }
+
+  if (!COMPRESSIBLE_TYPES.has(file.type)) {
+    return { error: "Files larger than 10MB can only be auto-compressed when they are JPG, PNG or WEBP images." };
+  }
+
+  const source = Buffer.from(await file.arrayBuffer());
+  let quality = 88;
+  let buffer = await sharp(source).webp({ quality }).toBuffer();
+  while (buffer.length > MAX_SIZE_BYTES && quality > 45) {
+    quality -= 8;
+    buffer = await sharp(source).webp({ quality }).toBuffer();
+  }
+
+  if (buffer.length > MAX_SIZE_BYTES) {
+    return { error: "The image is still larger than 10MB after compression." };
+  }
+
+  return {
+    buffer,
+    filename: `${path.basename(file.name, path.extname(file.name))}.webp`,
+    mimeType: "image/webp",
+    size: buffer.length
+  };
+}
+
 export async function uploadMediaFile(
   file: File,
   category: MediaCategory,
@@ -63,20 +101,18 @@ export async function uploadMediaFile(
   if (!ALLOWED_TYPES.has(file.type)) {
     return { ok: false, error: "Unsupported file type. Use JPG, PNG, WEBP, SVG or PDF." };
   }
-  if (file.size > MAX_SIZE_BYTES) {
-    return { ok: false, error: "File is larger than 10MB." };
-  }
+  const prepared = await prepareFile(file);
+  if ("error" in prepared) return { ok: false, error: prepared.error };
 
   const id = randomUUID();
-  const ext = path.extname(file.name) || "";
-  const base = sanitizeFilename(path.basename(file.name, ext));
+  const ext = path.extname(prepared.filename) || "";
+  const base = sanitizeFilename(path.basename(prepared.filename, ext));
   const filename = `${Date.now()}-${base || id}${ext}`;
 
   const dir = path.join(UPLOAD_ROOT, category);
   await mkdir(dir, { recursive: true });
 
-  const buffer = Buffer.from(await file.arrayBuffer());
-  await writeFile(path.join(dir, filename), buffer);
+  await writeFile(path.join(dir, filename), prepared.buffer);
 
   const item: MediaItem = {
     id,
@@ -85,8 +121,8 @@ export async function uploadMediaFile(
     originalName: file.name,
     url: `/uploads/${category}/${filename}`,
     title: title.trim() || file.name,
-    mimeType: file.type,
-    size: file.size,
+    mimeType: prepared.mimeType,
+    size: prepared.size,
     uploadedAt: new Date().toISOString()
   };
 
@@ -95,6 +131,66 @@ export async function uploadMediaFile(
   await saveMedia(items);
 
   return { ok: true, item };
+}
+
+export async function updateMediaFile(
+  id: string,
+  file: File | undefined,
+  category: MediaCategory,
+  title: string
+): Promise<UploadResult> {
+  if (!MEDIA_CATEGORIES.includes(category)) return { ok: false, error: "Invalid category" };
+  const items = await listMedia();
+  const current = items.find((item) => item.id === id);
+  if (!current) return { ok: false, error: "Media item not found." };
+
+  let prepared: PreparedFile | undefined;
+  if (file && file.size > 0) {
+    if (!ALLOWED_TYPES.has(file.type)) {
+      return { ok: false, error: "Unsupported file type. Use JPG, PNG, WEBP, SVG or PDF." };
+    }
+    const result = await prepareFile(file);
+    if ("error" in result) return { ok: false, error: result.error };
+    prepared = result;
+  }
+
+  const nextItem: MediaItem = {
+    ...current,
+    category,
+    title: title.trim() || (prepared ? file?.name ?? current.title : current.title),
+    ...(prepared
+      ? {
+          filename: `${Date.now()}-${sanitizeFilename(path.basename(prepared.filename, path.extname(prepared.filename))) || current.id}${path.extname(prepared.filename)}`,
+          originalName: file?.name ?? current.originalName,
+          mimeType: prepared.mimeType,
+          size: prepared.size
+        }
+      : {})
+  };
+  nextItem.url = `/uploads/${category}/${nextItem.filename}`;
+
+  const oldPath = path.join(UPLOAD_ROOT, current.category, current.filename);
+  const nextPath = path.join(UPLOAD_ROOT, category, nextItem.filename);
+  await mkdir(path.dirname(nextPath), { recursive: true });
+  if (prepared) await writeFile(nextPath, prepared.buffer);
+  if (oldPath !== nextPath) {
+    if (!prepared) {
+      try {
+        await rename(oldPath, nextPath);
+      } catch {
+        return { ok: false, error: "The existing media file could not be moved." };
+      }
+    } else {
+      try {
+        await unlink(oldPath);
+      } catch {
+        // The old file may already be missing.
+      }
+    }
+  }
+
+  await saveMedia(items.map((item) => (item.id === id ? nextItem : item)));
+  return { ok: true, item: nextItem };
 }
 
 export async function deleteMediaItem(id: string): Promise<void> {

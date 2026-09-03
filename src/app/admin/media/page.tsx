@@ -5,6 +5,7 @@ import { listMedia, MEDIA_CATEGORIES, type MediaItem } from "@/lib/media";
 import { deleteMedia } from "@/app/admin/actions";
 import { AdminNav } from "@/components/admin/AdminNav";
 import { MediaUploadForm } from "@/components/admin/MediaUploadForm";
+import { MediaEditForm } from "@/components/admin/MediaEditForm";
 
 export default async function AdminMediaPage() {
   if (!(await isAuthenticated())) {
@@ -82,6 +83,10 @@ function MediaCard({ item }: { item: MediaItem }) {
             </button>
           </form>
         </div>
+        <details className="mt-3 text-[0.78rem]">
+          <summary className="cursor-pointer font-mono text-[0.66rem] uppercase tracking-wide text-forest">Edit</summary>
+          <MediaEditForm id={item.id} category={item.category} title={item.title} />
+        </details>
       </div>
     </div>
   );

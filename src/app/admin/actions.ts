@@ -1,8 +1,8 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { checkPassword, createSession, destroySession } from "@/lib/auth";
-import { deleteMediaItem, uploadMediaFile, type MediaCategory } from "@/lib/media";
+import { checkPassword, createSession, destroySession, isAuthenticated } from "@/lib/auth";
+import { deleteMediaItem, updateMediaFile, uploadMediaFile, type MediaCategory } from "@/lib/media";
 
 export type LoginState = { error?: string };
 
@@ -32,6 +32,8 @@ export async function logout(): Promise<void> {
 export type UploadState = { error?: string; success?: boolean };
 
 export async function uploadMedia(_prevState: UploadState, formData: FormData): Promise<UploadState> {
+  if (!(await isAuthenticated())) return { error: "You must be signed in." };
+
   const file = formData.get("file");
   const category = String(formData.get("category") ?? "");
   const title = String(formData.get("title") ?? "");
@@ -49,5 +51,19 @@ export async function uploadMedia(_prevState: UploadState, formData: FormData): 
 }
 
 export async function deleteMedia(id: string): Promise<void> {
+  if (!(await isAuthenticated())) return;
   await deleteMediaItem(id);
+}
+
+export async function updateMedia(_prevState: UploadState, formData: FormData): Promise<UploadState> {
+  if (!(await isAuthenticated())) return { error: "You must be signed in." };
+
+  const id = String(formData.get("id") ?? "");
+  const fileValue = formData.get("file");
+  const file = fileValue instanceof File && fileValue.size > 0 ? fileValue : undefined;
+  const category = String(formData.get("category") ?? "");
+  const title = String(formData.get("title") ?? "");
+
+  const result = await updateMediaFile(id, file, category as MediaCategory, title);
+  return result.ok ? { success: true } : { error: result.error };
 }
