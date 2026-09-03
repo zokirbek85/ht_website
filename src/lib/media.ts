@@ -39,6 +39,10 @@ function isAllowedFile(file: File): boolean {
   return ALLOWED_TYPES.has(file.type) || path.extname(file.name).toLowerCase() === ".dng";
 }
 
+function isDngFile(file: File): boolean {
+  return path.extname(file.name).toLowerCase() === ".dng" || ["image/x-adobe-dng", "image/dng", "application/dng"].includes(file.type);
+}
+
 export async function listMedia(): Promise<MediaItem[]> {
   try {
     const raw = await readFile(DATA_FILE, "utf-8");
@@ -70,9 +74,28 @@ export type UploadResult = { ok: true; item: MediaItem } | { ok: false; error: s
 type PreparedFile = { buffer: Buffer; filename: string; mimeType: string; size: number };
 
 async function prepareFile(file: File): Promise<PreparedFile | { error: string }> {
+  const source = Buffer.from(await file.arrayBuffer());
+  if (isDngFile(file)) {
+    let quality = 92;
+    let buffer = await sharp(source).rotate().jpeg({ quality, mozjpeg: true }).toBuffer();
+    while (buffer.length > MAX_SIZE_BYTES && quality > 45) {
+      quality -= 8;
+      buffer = await sharp(source).rotate().jpeg({ quality, mozjpeg: true }).toBuffer();
+    }
+    if (buffer.length > MAX_SIZE_BYTES) {
+      return { error: "The DNG image is still larger than 10MB after JPG conversion." };
+    }
+    return {
+      buffer,
+      filename: `${path.basename(file.name, path.extname(file.name))}.jpg`,
+      mimeType: "image/jpeg",
+      size: buffer.length
+    };
+  }
+
   if (file.size <= MAX_SIZE_BYTES) {
     return {
-      buffer: Buffer.from(await file.arrayBuffer()),
+      buffer: source,
       filename: file.name,
       mimeType: file.type,
       size: file.size
@@ -83,7 +106,6 @@ async function prepareFile(file: File): Promise<PreparedFile | { error: string }
     return { error: "Files larger than 10MB can only be auto-compressed when they are JPG, PNG or WEBP images." };
   }
 
-  const source = Buffer.from(await file.arrayBuffer());
   let quality = 88;
   let buffer = await sharp(source).webp({ quality }).toBuffer();
   while (buffer.length > MAX_SIZE_BYTES && quality > 45) {
