@@ -8,6 +8,14 @@ BRANCH="${BRANCH:-main}"
 apt-get update
 apt-get install -y git curl nginx build-essential python3 pkg-config libvips-dev
 
+if ! swapon --show | grep -q .; then
+  fallocate -l 2G /swapfile
+  chmod 600 /swapfile
+  mkswap /swapfile
+  swapon /swapfile
+  grep -q '^/swapfile ' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
+fi
+
 if ! command -v node >/dev/null 2>&1 || [ "$(node -p 'process.versions.node.split(".")[0]')" -lt 20 ]; then
   curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
   apt-get install -y nodejs
@@ -22,9 +30,9 @@ else
 fi
 
 cd "$APP_DIR"
-SHARP_FORCE_GLOBAL_LIBVIPS=1 npm ci --include=optional
-SHARP_FORCE_GLOBAL_LIBVIPS=1 npm rebuild sharp --build-from-source
-npm run build
+SHARP_FORCE_GLOBAL_LIBVIPS=1 npm ci --include=optional --ignore-scripts
+MAKEFLAGS=-j1 SHARP_FORCE_GLOBAL_LIBVIPS=1 npm rebuild sharp --build-from-source
+NODE_OPTIONS=--max-old-space-size=768 npm run build
 
 touch "$APP_DIR/.env.local"
 chown -R www-data:www-data "$APP_DIR"

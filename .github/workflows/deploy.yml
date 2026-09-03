@@ -33,8 +33,8 @@ jobs:
             cd /var/www/hazorasp-textil
             git fetch origin main
             git reset --hard origin/main
-            SHARP_FORCE_GLOBAL_LIBVIPS=1 npm ci --include=optional
-            SHARP_FORCE_GLOBAL_LIBVIPS=1 npm rebuild sharp --build-from-source
-            npm run build
+            SHARP_FORCE_GLOBAL_LIBVIPS=1 npm ci --include=optional --ignore-scripts
+            MAKEFLAGS=-j1 SHARP_FORCE_GLOBAL_LIBVIPS=1 npm rebuild sharp --build-from-source
+            NODE_OPTIONS=--max-old-space-size=768 npm run build
             sudo systemctl restart hazorasp-textil
           '
