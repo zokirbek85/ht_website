@@ -25,6 +25,7 @@ cd "$APP_DIR"
 npm ci
 npm run build
 
+touch "$APP_DIR/.env.local"
 chown -R www-data:www-data "$APP_DIR"
 install -m 0644 deploy/hazorasp-textil.service /etc/systemd/system/hazorasp-textil.service
 install -m 0644 deploy/hazorasp-textil.nginx /etc/nginx/sites-available/hazorasp-textil
