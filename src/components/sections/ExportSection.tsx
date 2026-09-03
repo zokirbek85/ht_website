@@ -50,7 +50,7 @@ export function ExportSection({ certificates = [] }: { certificates?: MediaItem[
         </div>
 
         <div className="mx-auto aspect-[793/517] w-full max-w-[560px]">
-          <svg viewBox={uzbekistanMap.viewBox} width="100%" height="100%" role="img" aria-labelledby="export-map-title">
+          <svg viewBox="-90 0 883 517" width="100%" height="100%" role="img" aria-labelledby="export-map-title">
             <title id="export-map-title">{t("origin")} export routes</title>
             <g fill="none" stroke="var(--border-strong)" strokeWidth="1" opacity="0.55">
               <path d="M20 130H773" strokeDasharray="2 8" />
@@ -58,7 +58,7 @@ export function ExportSection({ certificates = [] }: { certificates?: MediaItem[
               <path d="M20 390H773" strokeDasharray="2 8" />
             </g>
             <g stroke="var(--accent-2)" strokeWidth="1.8" fill="none" strokeDasharray="4 5">
-              <path d={`M${origin.x} ${origin.y} Q 210 190 112 122`} />
+              <path d={`M${origin.x} ${origin.y} Q 130 160 -48 82`} />
               <path d={`M${origin.x} ${origin.y} Q 530 190 766 158`} />
               <path d={`M${origin.x} ${origin.y} Q 500 360 716 470`} />
             </g>
@@ -69,13 +69,13 @@ export function ExportSection({ certificates = [] }: { certificates?: MediaItem[
             </g>
             <g fill="var(--brass)" stroke="var(--bg-sunken)" strokeWidth="3">
               <circle cx={origin.x} cy={origin.y} r="7" />
-              <circle cx="112" cy="122" r="5" />
+              <circle cx="-48" cy="82" r="5" />
               <circle cx="766" cy="158" r="5" />
               <circle cx="716" cy="470" r="5" />
             </g>
             <g fontFamily="var(--font-plex-mono)" fontSize="11" fill="var(--text)" fontWeight="600">
               <text x="235" y="350">{t("origin")}</text>
-              <text x="78" y="105">{markets[0] ?? ""}</text>
+              <text x="-82" y="64">{markets[0] ?? ""}</text>
               <text x="700" y="140">{markets[1] ?? ""}</text>
               <text x="726" y="492">{markets[2] ?? ""}</text>
             </g>
