@@ -23,6 +23,8 @@ Required values:
 ```dotenv
 ADMIN_PASSWORD=choose-a-production-password
 ADMIN_SESSION_SECRET=generate-a-long-random-secret
+TELEGRAM_BOT_TOKEN=your-bot-token
+TELEGRAM_CHAT_ID=your-chat-id
 ```
 
 Then restart the service:
