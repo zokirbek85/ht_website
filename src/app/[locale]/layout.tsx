@@ -6,6 +6,7 @@ import { routing } from "@/i18n/routing";
 import { oswald, ptSans, plexMono } from "@/lib/fonts";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { getSiteMedia } from "@/lib/site-media";
 import "../globals.css";
 
 export function generateStaticParams() {
@@ -19,6 +20,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "meta" });
+  const favicon = await getSiteMedia("favicon");
   return {
     title: t("homeTitle"),
     description: t("homeDescription"),
@@ -34,9 +36,9 @@ export async function generateMetadata({
         { url: "/favicon.ico", sizes: "any" },
         { url: "/icons/icon-32.png", sizes: "32x32", type: "image/png" },
         { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
-        { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" }
+        { url: favicon?.url ?? "/icons/icon-512.png", sizes: "512x512", type: favicon?.mimeType ?? "image/png" }
       ],
-      apple: [{ url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" }]
+      apple: [{ url: favicon?.url ?? "/icons/icon-512.png", sizes: "512x512", type: favicon?.mimeType ?? "image/png" }]
     },
     manifest: "/site.webmanifest"
   };
@@ -55,6 +57,7 @@ export default async function LocaleLayout({
   }
 
   const messages = await getMessages();
+  const logo = await getSiteMedia("logo");
 
   return (
     <html
@@ -67,9 +70,9 @@ export default async function LocaleLayout({
           <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:z-[200] focus:bg-forest focus:text-white focus:px-4 focus:py-2">
             Skip to content
           </a>
-          <Header />
+          <Header logoUrl={logo?.url} />
           <main id="main">{children}</main>
-          <Footer />
+          <Footer logoUrl={logo?.url} />
         </NextIntlClientProvider>
       </body>
     </html>

@@ -2,10 +2,12 @@ import type { Locale } from "@/i18n/routing";
 import type { NewsItem, Product } from "./content-types";
 import { listNewsRecords, localizeNews } from "./news-store";
 import { listProductRecords, localizeProduct } from "./products-store";
+import { getSiteMedia } from "./site-media";
 
 export async function getProducts(locale: Locale): Promise<Product[]> {
   const records = await listProductRecords();
-  return records.map((r) => localizeProduct(r, locale));
+  const productImage = await getSiteMedia("product");
+  return records.map((r) => ({ ...localizeProduct(r, locale), image: productImage?.url }));
 }
 
 export async function getProductBySlug(locale: Locale, slug: string): Promise<Product | undefined> {

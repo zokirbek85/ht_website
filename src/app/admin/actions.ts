@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { checkPassword, createSession, destroySession, isAuthenticated } from "@/lib/auth";
 import { deleteMediaItem, updateMediaFile, uploadMediaFile, type MediaCategory } from "@/lib/media";
+import { saveSiteMediaSettings, SITE_MEDIA_ROLES, type SiteMediaRole } from "@/lib/site-media";
 
 export type LoginState = { error?: string };
 
@@ -66,4 +67,14 @@ export async function updateMedia(_prevState: UploadState, formData: FormData): 
 
   const result = await updateMediaFile(id, file, category as MediaCategory, title);
   return result.ok ? { success: true } : { error: result.error };
+}
+
+export async function updateSiteMedia(_prevState: UploadState, formData: FormData): Promise<UploadState> {
+  if (!(await isAuthenticated())) return { error: "You must be signed in." };
+
+  const values = Object.fromEntries(
+    SITE_MEDIA_ROLES.map((role) => [role, String(formData.get(role) ?? "") || null])
+  ) as Record<SiteMediaRole, string | null>;
+  await saveSiteMediaSettings(values);
+  return { success: true };
 }

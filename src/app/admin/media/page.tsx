@@ -6,13 +6,15 @@ import { deleteMedia } from "@/app/admin/actions";
 import { AdminNav } from "@/components/admin/AdminNav";
 import { MediaUploadForm } from "@/components/admin/MediaUploadForm";
 import { MediaEditForm } from "@/components/admin/MediaEditForm";
+import { SiteMediaForm } from "@/components/admin/SiteMediaForm";
+import { getSiteMediaSettings } from "@/lib/site-media";
 
 export default async function AdminMediaPage() {
   if (!(await isAuthenticated())) {
     redirect("/admin/login");
   }
 
-  const items = await listMedia();
+  const [items, settings] = await Promise.all([listMedia(), getSiteMediaSettings()]);
 
   return (
     <>
@@ -25,7 +27,10 @@ export default async function AdminMediaPage() {
         </p>
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[380px_1fr]">
-          <MediaUploadForm />
+          <div className="flex flex-col gap-6">
+            <MediaUploadForm />
+            <SiteMediaForm items={items} settings={settings} />
+          </div>
 
           <div className="flex flex-col gap-8">
             {MEDIA_CATEGORIES.map((category) => {
