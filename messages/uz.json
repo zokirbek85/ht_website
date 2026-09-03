@@ -1,0 +1,210 @@
+{
+  "meta": {
+    "siteName": "Hazorasp-Textil",
+    "titleSuffix": "Hazorasp-Textil MCHJ",
+    "homeTitle": "Hazorasp-Textil | O'zbek paxta ipligi ishlab chiqaruvchisi va eksportchisi",
+    "homeDescription": "Hazorasp-Textil LLC — 2017-yilda Xorazm viloyati, Hazorasp tumanida tashkil etilgan, trikotaj uchun 100% o'zbek paxtasidan kardali halqali yigirilgan ip ishlab chiqaruvchi bevosita korxona. Quvvati oyiga 400 tonnagacha."
+  },
+  "nav": {
+    "about": "Kompaniya haqida",
+    "production": "Ishlab chiqarish",
+    "products": "Mahsulotlar",
+    "quality": "Sifat nazorati",
+    "export": "Eksport",
+    "sustainability": "Barqarorlik",
+    "news": "Yangiliklar",
+    "contact": "Aloqa",
+    "contactCta": "Biz bilan bog'laning",
+    "skipToContent": "Kontentga o'tish",
+    "toggleMenu": "Menyuni ochish"
+  },
+  "hero": {
+    "eyebrow": "Hazorasp-Textil MCHJ — Xorazm, O'zbekiston",
+    "titleLine1": "O'zbek paxtasidan",
+    "titleLine2": "yuqori sifatli ipgacha",
+    "sub": "Xalqaro tekstil hamkorlari talab qiladigan standartlarga mos — tola qabulidan tayyor bobinagacha — paxta ipligi ishlab chiqaruvchi korxona.",
+    "ctaPrimary": "Biz bilan bog'laning",
+    "ctaSecondary": "Mahsulot katalogini so'rash",
+    "scrollLabel": "Pastga aylantiring"
+  },
+  "stats": {
+    "yearsLabel": "Yillik tajriba",
+    "items": [
+      { "value": 400, "suffix": " t", "label": "Oylik quvvat" },
+      { "value": 5, "suffix": "", "label": "Ip nomerlari (Ne)" },
+      { "value": 3, "suffix": "", "label": "Eksport bozorlari" },
+      { "value": 100, "suffix": "%", "label": "O'zbek paxtasi" }
+    ]
+  },
+  "about": {
+    "sectionNum": "02 / Kompaniya haqida",
+    "eyebrow": "Kompaniya haqida",
+    "title": "O'zbekiston to'qimachilik sanoatini rivojlantirish uchun tashkil etilgan",
+    "lede": "Hazorasp-Textil LLC — 2017-yilda Xorazm viloyati, Hazorasp tumanida tashkil etilgan, trikotaj uchun 100% paxta kardali halqali yigirilgan ip ishlab chiqaruvchi bevosita korxona.",
+    "historyTitle": "Tarix",
+    "history": "Hazorasp-Textil LLC 2017-yilda O'zbekiston to'qimachilik sanoatini rivojlantirish va mahalliy paxta xomashyosini yuqori qo'shilgan qiymatli ipga aylantirish maqsadida tashkil etilgan. Korxona oyiga 400 tonnagacha quvvatga ega bevosita ishlab chiqaruvchi bo'lib, trikotaj uchun kardali halqali yigirilgan ipni xalqaro bozorlarga yetkazib beradi.",
+    "missionTitle": "Missiya",
+    "mission": "Mahalliy paxta xomashyosini zamonaviy texnologiyalar asosida yuqori sifatli ip-kalavaga aylantirib, mijozlarga ishonchli, barqaror va xalqaro standartlarga mos mahsulotlarni yetkazib berish hamda O'zbekiston to'qimachilik sanoatining rivojlanishiga munosib hissa qo'shish.",
+    "visionTitle": "Vizyon",
+    "vision": "Markaziy Osiyoning eng ishonchli va innovatsion ip-kalava ishlab chiqaruvchilaridan biriga aylanish, eksport geografiyasini kengaytirish va zamonaviy ishlab chiqarish madaniyati orqali xalqaro bozorda tan olingan milliy brendni shakllantirish.",
+    "quote": "Biz faoliyatimizni yuqori sifat, zamonaviy texnologiyalar va o'zaro ishonch tamoyillari asosida olib boramiz.",
+    "quoteAuthor": "Bosh direktor, Hazorasp-Textil MCHJ",
+    "ceoMessageTitle": "Bosh direktor murojaati",
+    "ceoMessage": "Hurmatli hamkorlar va mijozlar!\n\nHazorasp-Textil jamoasi nomidan sizni samimiy qutlayman.\n\nBiz faoliyatimizni yuqori sifat, zamonaviy texnologiyalar va o'zaro ishonch tamoyillari asosida olib boramiz. Har bir hamkorimiz bilan uzoq muddatli va barqaror munosabatlarni rivojlantirishni o'z oldimizga maqsad qilganmiz. Ishonamizki, sifatli mahsulot, mas'uliyatli yondashuv va innovatsion rivojlanish orqali nafaqat O'zbekiston, balki xalqaro bozorda ham ishonchli hamkor bo'lib qolamiz.",
+    "values": [
+      { "title": "Quality Excellence", "desc": "Har bir mahsulotda yuqori sifat standartlariga rioya qilish." },
+      { "title": "Reliability", "desc": "Mijozlar va hamkorlar oldidagi majburiyatlarni o'z vaqtida bajarish." },
+      { "title": "Integrity", "desc": "Halollik, ochiqlik va biznes etikasi tamoyillariga amal qilish." },
+      { "title": "Innovation", "desc": "Ishlab chiqarish va boshqaruvda zamonaviy texnologiyalarni joriy etish." },
+      { "title": "Sustainability", "desc": "Resurslardan samarali foydalanish va ekologik mas'uliyat." },
+      { "title": "Partnership", "desc": "Uzoq muddatli va o'zaro manfaatli hamkorlikni rivojlantirish." },
+      { "title": "People First", "desc": "Xodimlarning xavfsizligi, rivojlanishi va professional o'sishini qo'llab-quvvatlash." }
+    ]
+  },
+  "production": {
+    "sectionNum": "03 / Ishlab chiqarish jarayoni",
+    "eyebrow": "Ishlab chiqarish jarayoni",
+    "title": "Xom paxtadan tayyor bobinagacha",
+    "lede": "Oltita nazorat qilinadigan bosqich — har biri keyingisiga o'tishdan oldin qayd etiladi va tekshiriladi.",
+    "steps": [
+      { "index": "01", "title": "Paxta qabul qilish", "desc": "Xom paxta mintaqaviy paxta tozalash zavodlaridan kelganda qabul qilinadi, tortiladi va tola partiyasi bo'yicha saralanadi.", "tech": "Partiya kuzatuvchanligi qayd etiladi" },
+      { "index": "02", "title": "Tozalash", "desc": "Puflash bo'limi liniyalari ochishdan oldin chiqindi, urug' qobig'i va qisqa tolani olib tashlaydi.", "tech": "Ko'p bosqichli puflash bo'limi" },
+      { "index": "03", "title": "Tola tayyorlash", "desc": "Tarash va cho'zish tolalarni bir xil, nazorat qilinadigan lentaga tekislaydi.", "tech": "Tarash va cho'zish mashinasi" },
+      { "index": "04", "title": "Yigirish", "desc": "Yigiruv mashinalari lentani belgilangan nomerdagi ipga buraydi.", "tech": "Kardali yigirish" },
+      { "index": "05", "title": "Sifat nazorati", "desc": "Chiqarilishdan oldin har bir partiya mustahkamlik, tekislik va nomer bo'yicha tekshiriladi.", "tech": "Statistik sifat baholash" },
+      { "index": "06", "title": "Tayyor ip", "desc": "O'rash, konditsiyalash va xaridorning yuk tashish spetsifikatsiyasiga muvofiq qadoqlash.", "tech": "Bobina / xanka qadoqlash" }
+    ]
+  },
+  "products": {
+    "sectionNum": "04 / Mahsulotlar",
+    "eyebrow": "Mahsulotlar",
+    "title": "Sizning spetsifikatsiyangizga mos ip",
+    "lede": "Hozirda ishlab chiqarilmoqda: trikotaj uchun 100% paxta kardali halqali yigirilgan ip. Ne 20/1, 24/1, 26/1, 28/1 va 30/1 nomerlari mavjud. Xaridor tasdig'i uchun 20–50 kg namunalar taqdim etiladi.",
+    "specLabels": {
+      "count": "Nomer",
+      "composition": "Tarkib",
+      "strength": "Mustahkamlik",
+      "twist": "Burama",
+      "packaging": "Qadoqlash",
+      "application": "Qo'llanilishi"
+    },
+    "actions": {
+      "spec": "Spetsifikatsiya (PDF)",
+      "quote": "Narx so'rash"
+    },
+    "items": [
+      {
+        "slug": "carded-knitting",
+        "tag": "Kardali · trikotaj",
+        "name": "Kardali paxta ipi",
+        "desc": "Trikotaj uchun mo'ljallangan 100% paxta kardali halqali yigirilgan ip, beshta standart nomerda mavjud.",
+        "count": "Ne 20/1, 24/1, 26/1, 28/1, 30/1",
+        "composition": "100% paxta",
+        "strength": "So'rov asosida",
+        "twist": "So'rov asosida",
+        "packaging": "2,4 kg bobina; PP qopda 24 ta bobina; har qopda 57,6 kg sof og'irlik",
+        "application": "Trikotaj"
+      }
+    ]
+  },
+  "quality": {
+    "sectionNum": "05 / Sifat nazorati",
+    "eyebrow": "Sifat nazorati",
+    "title": "Shikoyatdan keyin emas, jo'natishdan oldin tekshiriladi",
+    "lede": "Tola va ip liniyaning har bir bosqichida, partiya chiqarilishidan oldin tekshiriladi.",
+    "items": [
+      { "title": "Tola testi (HVI)", "desc": "Kiruvchi paxta ishlab chiqarishga kirishidan oldin mikroner, uzunlik, mustahkamlik va rang darajasi bo'yicha o'lchanadi." },
+      { "title": "Ip mustahkamligi va tekisligi", "desc": "Nomer, cho'zilish kuchi, uzayish va tekislik tan olingan statistik ko'rsatkichlarga nisbatan o'lchanadi." },
+      { "title": "Namlik va konditsiyalash", "desc": "Yakuniy tortish va qadoqlashdan oldin ip standart atmosferaga moslashtiriladi." },
+      { "title": "Ifloslanish nazorati", "desc": "Puflash va o'rash bosqichlarida begona tolani aniqlash keyingi bosqichdagi mato sifatini himoya qiladi." }
+    ],
+    "certPanelTitle": "Sifat nazorati tamoyillari",
+    "certs": [
+      { "name": "Sifat menejmenti", "desc": "Ishlab chiqarishning har bir bosqichida tuzilgan sifat nazorati" },
+      { "name": "Mahsulot muvofiqligi", "desc": "Xalqaro tekstil amaliyotiga mos test protseduralari" },
+      { "name": "Partiyani kuzatish", "desc": "Har bir partiya uchun dalada bobinagacha yozuvlar" },
+      { "name": "Doimiy takomillashtirish", "desc": "Barqarorlikni oshirish uchun uskuna va jarayonlar yangilanadi" }
+    ]
+  },
+  "export": {
+    "sectionNum": "06 / Eksport va hamkorlik",
+    "eyebrow": "Eksport va hamkorlik",
+    "title": "O'zbekistondan ishonchli tekstil hamkori",
+    "copy": "Hazorasp-Textil xalqaro tekstil bozorlariga, jumladan Turkiya, Xitoy va Hindistonga mahsulot yetkazib beradi. Korxona trikotaj fabrikalari, tekstil korxonalari, ip importchilari va distribyutorlari bilan uzoq muddatli hamkorlikni rivojlantirishdan manfaatdor.",
+    "markets": ["Turkiya", "Xitoy", "Hindiston"],
+    "stats": [
+      { "value": 400, "suffix": " t", "label": "Oylik quvvat" },
+      { "value": 100, "suffix": "%", "label": "Paxta tarkibi" }
+    ],
+    "cta": "Eksport buyurtmasini muhokama qilish"
+  },
+  "sustainability": {
+    "sectionNum": "07 / Barqarorlik",
+    "eyebrow": "Barqarorlik",
+    "title": "Shior bilan emas, jarayon bilan mas'uliyat",
+    "lede": "Resurslardan foydalanish va chiqindilarni boshqarish zavod ishining bir qismi, alohida tashabbus emas.",
+    "items": [
+      { "title": "Suvdan mas'uliyat bilan foydalanish", "desc": "Ishlab chiqarishda suvni tejash amaliyotlari qo'llaniladi, quvvat oshgani sari qo'shimcha samaradorlik choralari rejalashtirilgan." },
+      { "title": "Energiya samaradorligi", "desc": "Uskuna va jarayonlar energiya samaradorligini hisobga olgan holda tanlanadi, imkon qadar sarfni kamaytiradi." },
+      { "title": "Mas'uliyatli xom ashyo", "desc": "Paxta yon mahsulotlari va ishlab chiqarish chiqindilari tashlab yuborilmasdan mas'uliyat bilan qayta ishlanadi." }
+    ]
+  },
+  "news": {
+    "sectionNum": "08 / Yangiliklar va media",
+    "eyebrow": "Yangiliklar va media",
+    "title": "Zavod hayotidan",
+    "allLink": "Barcha yangiliklar",
+    "readMore": "Batafsil",
+    "items": [
+      { "slug": "carded-line-update", "category": "Ishlab chiqarish", "title": "Kardali ip liniyasi beshta standart nomerda ishlamoqda", "excerpt": "Trikotaj uchun Ne 20/1, 24/1, 26/1, 28/1 va 30/1 kardali halqali yigirilgan paxta ipi mavjud.", "date": "2026-06-10" },
+      { "slug": "export-growth", "category": "Eksport", "title": "Hazorasp-Textil uchta bozorda eksport hamkorligini rivojlantirmoqda", "excerpt": "Korxona Turkiya, Xitoy va Hindistonda uzoq muddatli yetkazib berish hamkorligini rivojlantirmoqda.", "date": "2026-05-05" },
+      { "slug": "quality-process", "category": "Sifat nazorati", "title": "Ichki laboratoriya har bir partiyani tekshirishni kuchaytirdi", "excerpt": "Har bir bosqichdagi tola va ip testlari endi chiqarilishdan oldin barcha ishlab chiqarish partiyalarini qamrab oladi.", "date": "2026-03-18" }
+    ]
+  },
+  "contact": {
+    "sectionNum": "09 / Aloqa",
+    "eyebrow": "Aloqa",
+    "title": "Suhbatni boshlang",
+    "lede": "Talabingizni yuboring — savdo muhandisi bir ish kuni ichida javob beradi.",
+    "info": {
+      "officeTitle": "Bosh ofis",
+      "office": "O'zbekiston, Xorazm viloyati, Hazorasp tumani, Mustaqillik ko'chasi, 45-uy",
+      "salesTitle": "Savdo va eksport",
+      "email": "ahmadjonbotirov593@gmail.com",
+      "phone": "+998 97 747 63 06",
+      "hoursTitle": "Ish vaqti",
+      "hours": "09:00–18:00 (GMT+5)",
+      "langTitle": "Tillar",
+      "langs": "English · Русский · O'zbekcha"
+    },
+    "form": {
+      "company": "Kompaniya nomi",
+      "country": "Davlat",
+      "person": "Aloqa uchun shaxs",
+      "email": "Email",
+      "phone": "Telefon",
+      "product": "Qiziqtirgan mahsulot",
+      "productOptions": ["Kardali paxta ipi (trikotaj)", "Hali aniq emas"],
+      "volume": "Kerakli hajm (tonna/oy)",
+      "volumePlaceholder": "masalan, 50–100 tonna/oy",
+      "message": "Xabar",
+      "messagePlaceholder": "Talabingiz haqida ma'lumot bering...",
+      "submit": "So'rovni yuborish",
+      "submitted": "So'rov qabul qilindi",
+      "note": "Yoki bosma mahsulot katalogini (PDF) so'rang.",
+      "errors": {
+        "required": "Bu maydon to'ldirilishi shart",
+        "email": "To'g'ri email manzilini kiriting"
+      }
+    }
+  },
+  "footer": {
+    "tagline": "Xorazm, O'zbekistonda paxta qayta ishlash va ip ishlab chiqarish — xalqaro eksport hamkorlari uchun.",
+    "companyTitle": "Kompaniya",
+    "productsTitle": "Mahsulotlar",
+    "resourcesTitle": "Resurslar",
+    "requestCatalog": "Katalog so'rash",
+    "certificates": "Sifat va sertifikatlar",
+    "rights": "Barcha huquqlar himoyalangan."
+  }
+}

@@ -1,0 +1,68 @@
+[
+  {
+    "id": "f1a1a1a1-1111-4a10-9c2a-000000000001",
+    "slug": "carded-line-update",
+    "date": "2026-06-10",
+    "translations": {
+      "en": {
+        "category": "Production",
+        "title": "Carded yarn line now running five standard counts",
+        "excerpt": "Ne 20/1, 24/1, 26/1, 28/1 and 30/1 carded ring-spun cotton yarn for knitting are available."
+      },
+      "ru": {
+        "category": "Производство",
+        "title": "Линия кардной пряжи работает по пяти стандартным номерам",
+        "excerpt": "Кардная кольцепрядильная хлопковая пряжа Ne 20/1, 24/1, 26/1, 28/1 и 30/1 доступна для трикотажа."
+      },
+      "uz": {
+        "category": "Ishlab chiqarish",
+        "title": "Kardali ip liniyasi beshta standart nomerda ishlamoqda",
+        "excerpt": "Trikotaj uchun Ne 20/1, 24/1, 26/1, 28/1 va 30/1 kardali halqali yigirilgan paxta ipi mavjud."
+      }
+    }
+  },
+  {
+    "id": "f1a1a1a1-1111-4a10-9c2a-000000000002",
+    "slug": "export-growth",
+    "date": "2026-05-05",
+    "translations": {
+      "en": {
+        "category": "Export",
+        "title": "Hazorasp-Textil develops export partnerships in three markets",
+        "excerpt": "The company is developing long-term supply partnerships in Turkey, China and India."
+      },
+      "ru": {
+        "category": "Экспорт",
+        "title": "Hazorasp-Textil развивает экспортные партнёрства на трёх рынках",
+        "excerpt": "Компания развивает долгосрочные партнёрства по поставкам в Турции, Китае и Индии."
+      },
+      "uz": {
+        "category": "Eksport",
+        "title": "Hazorasp-Textil uchta bozorda eksport hamkorligini rivojlantirmoqda",
+        "excerpt": "Korxona Turkiya, Xitoy va Hindistonda uzoq muddatli yetkazib berish hamkorligini rivojlantirmoqda."
+      }
+    }
+  },
+  {
+    "id": "f1a1a1a1-1111-4a10-9c2a-000000000003",
+    "slug": "quality-process",
+    "date": "2026-03-18",
+    "translations": {
+      "en": {
+        "category": "Quality",
+        "title": "In-house lab strengthens lot-by-lot testing",
+        "excerpt": "Fiber and yarn testing at every stage now covers every production lot before release."
+      },
+      "ru": {
+        "category": "Качество",
+        "title": "Собственная лаборатория усиливает проверку каждой партии",
+        "excerpt": "Испытания волокна и пряжи на каждом этапе теперь охватывают каждую производственную партию перед выпуском."
+      },
+      "uz": {
+        "category": "Sifat nazorati",
+        "title": "Ichki laboratoriya har bir partiyani tekshirishni kuchaytirdi",
+        "excerpt": "Har bir bosqichdagi tola va ip testlari endi chiqarilishdan oldin barcha ishlab chiqarish partiyalarini qamrab oladi."
+      }
+    }
+  }
+]

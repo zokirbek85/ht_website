@@ -1,0 +1,210 @@
+{
+  "meta": {
+    "siteName": "Hazorasp-Textil",
+    "titleSuffix": "Hazorasp-Textil MCHJ",
+    "homeTitle": "Hazorasp-Textil | Uzbek Cotton Yarn Manufacturer & Exporter",
+    "homeDescription": "Hazorasp-Textil LLC is a direct manufacturer of 100% Uzbek cotton carded ring-spun yarn for knitting, established in 2017 in Hazorasp District, Khorezm Region. With capacity up to 400 MT per month, we supply international textile markets."
+  },
+  "nav": {
+    "about": "About",
+    "production": "Production",
+    "products": "Products",
+    "quality": "Quality",
+    "export": "Export",
+    "sustainability": "Sustainability",
+    "news": "News",
+    "contact": "Contact",
+    "contactCta": "Contact Us",
+    "skipToContent": "Skip to content",
+    "toggleMenu": "Toggle menu"
+  },
+  "hero": {
+    "eyebrow": "Hazorasp-Textil MCHJ — Xorazm, Uzbekistan",
+    "titleLine1": "From Uzbek Cotton",
+    "titleLine2": "to High-Quality Yarn",
+    "sub": "A cotton yarn manufacturer built to the standards international textile partners require — from fiber intake to finished cone.",
+    "ctaPrimary": "Contact Us",
+    "ctaSecondary": "Request Product Catalog",
+    "scrollLabel": "Scroll"
+  },
+  "stats": {
+    "yearsLabel": "Years of experience",
+    "items": [
+      { "value": 400, "suffix": " MT", "label": "Monthly capacity" },
+      { "value": 5, "suffix": "", "label": "Yarn counts (Ne)" },
+      { "value": 3, "suffix": "", "label": "Export markets" },
+      { "value": 100, "suffix": "%", "label": "Uzbek cotton" }
+    ]
+  },
+  "about": {
+    "sectionNum": "02 / About the company",
+    "eyebrow": "About the company",
+    "title": "Built to grow Uzbekistan's textile industry",
+    "lede": "Hazorasp-Textil LLC is a direct manufacturer of 100% cotton carded ring-spun yarn for knitting, established in 2017 in Hazorasp District, Khorezm Region.",
+    "historyTitle": "History",
+    "history": "Hazorasp-Textil LLC was established in 2017 to advance Uzbekistan's textile industry by converting locally grown cotton into high-value yarn. The company is a direct manufacturer with capacity up to 400 MT per month, supplying carded ring-spun yarn for knitting applications to international markets.",
+    "missionTitle": "Mission",
+    "mission": "To convert local cotton into high-quality yarn using modern technology, delivering reliable, consistent, internationally compliant products to our customers — and to contribute meaningfully to the development of Uzbekistan's textile industry.",
+    "visionTitle": "Vision",
+    "vision": "To become one of Central Asia's most trusted and innovative yarn producers, expanding our export footprint and building a nationally rooted brand recognized in international markets through a modern production culture.",
+    "quote": "We run our operations on the principles of high quality, modern technology and mutual trust.",
+    "quoteAuthor": "General Director, Hazorasp-Textil MCHJ",
+    "ceoMessageTitle": "Message from the General Director",
+    "ceoMessage": "Dear partners and customers,\n\nOn behalf of the Hazorasp-Textil team, I welcome you.\n\nWe run our operations on the principles of high quality, modern technology and mutual trust. Building long-term, stable relationships with every partner is a goal we hold ourselves to. We believe that through quality products, a responsible approach and continuous innovation, we will remain a trusted partner — in Uzbekistan and in international markets alike.",
+    "values": [
+      { "title": "Quality Excellence", "desc": "Upholding high quality standards in every product." },
+      { "title": "Reliability", "desc": "Meeting our commitments to customers and partners on time." },
+      { "title": "Integrity", "desc": "Acting with honesty, transparency and sound business ethics." },
+      { "title": "Innovation", "desc": "Introducing modern technology across production and management." },
+      { "title": "Sustainability", "desc": "Using resources efficiently and acting with environmental responsibility." },
+      { "title": "Partnership", "desc": "Building long-term, mutually beneficial cooperation." },
+      { "title": "People First", "desc": "Supporting our employees' safety, growth and professional development." }
+    ]
+  },
+  "production": {
+    "sectionNum": "03 / Production process",
+    "eyebrow": "Production process",
+    "title": "From raw boll to finished cone",
+    "lede": "Six controlled stages, each logged and tested before the fiber moves to the next.",
+    "steps": [
+      { "index": "01", "title": "Cotton Receiving", "desc": "Raw cotton is intake, weighed and graded by fiber batch on arrival from regional gins.", "tech": "Batch traceability logged" },
+      { "index": "02", "title": "Cleaning", "desc": "Blow room lines remove trash, seed coat and short fiber before opening.", "tech": "Multi-stage blow room" },
+      { "index": "03", "title": "Fiber Preparation", "desc": "Carding and drawing align fibers into a uniform, controlled sliver.", "tech": "Card + draw frame" },
+      { "index": "04", "title": "Spinning", "desc": "Spinning frames twist the sliver into yarn at the specified count.", "tech": "Carded spinning" },
+      { "index": "05", "title": "Quality Control", "desc": "Every lot is tested for strength, evenness and count before release.", "tech": "Statistical quality benchmarking" },
+      { "index": "06", "title": "Finished Yarn", "desc": "Winding, conditioning and packaging to the buyer's shipping specification.", "tech": "Cone / hank packaging" }
+    ]
+  },
+  "products": {
+    "sectionNum": "04 / Products",
+    "eyebrow": "Products",
+    "title": "Yarn built to your specification",
+    "lede": "Currently in production: 100% cotton carded ring-spun yarn for knitting. Available counts are Ne 20/1, 24/1, 26/1, 28/1 and 30/1. Samples of 20–50 kg are available for buyer approval.",
+    "specLabels": {
+      "count": "Count",
+      "composition": "Composition",
+      "strength": "Strength",
+      "twist": "Twist",
+      "packaging": "Packaging",
+      "application": "Application"
+    },
+    "actions": {
+      "spec": "Spec Sheet (PDF)",
+      "quote": "Request Quotation"
+    },
+    "items": [
+      {
+        "slug": "carded-knitting",
+        "tag": "Carded · Knitting",
+        "name": "Carded Cotton Yarn",
+        "desc": "100% cotton carded ring-spun yarn produced for knitting applications, available across five standard counts.",
+        "count": "Ne 20/1, 24/1, 26/1, 28/1, 30/1",
+        "composition": "100% Cotton",
+        "strength": "Available on request",
+        "twist": "Available on request",
+        "packaging": "2.4 kg cone; 24 cones per PP bag; 57.6 kg net per bag",
+        "application": "Knitwear"
+      }
+    ]
+  },
+  "quality": {
+    "sectionNum": "05 / Quality control",
+    "eyebrow": "Quality control",
+    "title": "Tested before it ships, not after it's questioned",
+    "lede": "Fiber and yarn are checked at every stage of the line before a lot is released.",
+    "items": [
+      { "title": "Fiber testing (HVI)", "desc": "Incoming cotton is measured for micronaire, length, strength and color grade before it enters production." },
+      { "title": "Yarn strength & evenness", "desc": "Count, tenacity, elongation and evenness are measured against recognized statistical benchmarks." },
+      { "title": "Moisture & conditioning", "desc": "Yarn is conditioned to standard atmosphere before final weighing and packing." },
+      { "title": "Contamination control", "desc": "Foreign fiber detection at blow room and winding stages protects downstream fabric quality." }
+    ],
+    "certPanelTitle": "Quality assurance practices",
+    "certs": [
+      { "name": "Quality management", "desc": "Structured quality control at every production stage" },
+      { "name": "Product compliance", "desc": "Testing procedures aligned with international textile practice" },
+      { "name": "Batch traceability", "desc": "Field-to-cone batch records for every lot" },
+      { "name": "Continuous improvement", "desc": "Equipment and processes upgraded to raise consistency" }
+    ]
+  },
+  "export": {
+    "sectionNum": "06 / Export & cooperation",
+    "eyebrow": "Export & cooperation",
+    "title": "Reliable textile partner from Uzbekistan",
+    "copy": "Hazorasp-Textil supplies international textile markets, including Turkey, China and India. We are interested in long-term partnerships with knitting factories, textile mills, yarn importers and distributors.",
+    "markets": ["Turkey", "China", "India"],
+    "stats": [
+      { "value": 400, "suffix": " MT", "label": "Monthly capacity" },
+      { "value": 100, "suffix": "%", "label": "Cotton composition" }
+    ],
+    "cta": "Discuss an export order"
+  },
+  "sustainability": {
+    "sectionNum": "07 / Sustainability",
+    "eyebrow": "Sustainability",
+    "title": "Responsible by process, not by slogan",
+    "lede": "Resource use and waste handling are part of how the mill is run, not an afterthought.",
+    "items": [
+      { "title": "Water stewardship", "desc": "Water-conscious practices are applied across production, with further efficiency measures planned as operations scale." },
+      { "title": "Energy efficiency", "desc": "Equipment and processes are selected with energy efficiency in mind, reducing consumption where possible." },
+      { "title": "Responsible sourcing", "desc": "Cotton by-products and production waste are handled responsibly rather than discarded." }
+    ]
+  },
+  "news": {
+    "sectionNum": "08 / News & media",
+    "eyebrow": "News & media",
+    "title": "From the mill floor",
+    "allLink": "All updates",
+    "readMore": "Read more",
+    "items": [
+      { "slug": "carded-line-update", "category": "Production", "title": "Carded yarn line now running five standard counts", "excerpt": "Ne 20/1, 24/1, 26/1, 28/1 and 30/1 carded ring-spun cotton yarn are available for knitting.", "date": "2026-06-10" },
+      { "slug": "export-growth", "category": "Export", "title": "Hazorasp-Textil develops export partnerships in three markets", "excerpt": "The company is developing long-term supply partnerships in Turkey, China and India.", "date": "2026-05-05" },
+      { "slug": "quality-process", "category": "Quality", "title": "In-house lab strengthens lot-by-lot testing", "excerpt": "Fiber and yarn testing at every stage now covers every production lot before release.", "date": "2026-03-18" }
+    ]
+  },
+  "contact": {
+    "sectionNum": "09 / Contact",
+    "eyebrow": "Contact",
+    "title": "Start a conversation",
+    "lede": "Send your requirement and a sales engineer will respond within one business day.",
+    "info": {
+      "officeTitle": "Head office",
+      "office": "45 Mustaqillik Street, Hazorasp district, Xorazm region, Uzbekistan",
+      "salesTitle": "Sales & export",
+      "email": "ahmadjonbotirov593@gmail.com",
+      "phone": "+998 97 747 63 06",
+      "hoursTitle": "Working hours",
+      "hours": "09:00–18:00 (GMT+5)",
+      "langTitle": "Languages",
+      "langs": "English · Русский · O'zbekcha"
+    },
+    "form": {
+      "company": "Company name",
+      "country": "Country",
+      "person": "Contact person",
+      "email": "Email",
+      "phone": "Phone",
+      "product": "Product interest",
+      "productOptions": ["Carded Cotton Yarn (Knitting)", "Not sure yet"],
+      "volume": "Required volume (tons / month)",
+      "volumePlaceholder": "e.g. 50–100 tons/month",
+      "message": "Message",
+      "messagePlaceholder": "Tell us about your requirement...",
+      "submit": "Submit Inquiry",
+      "submitted": "Inquiry received",
+      "note": "Or request a printable product catalog (PDF) instead.",
+      "errors": {
+        "required": "This field is required",
+        "email": "Enter a valid email address"
+      }
+    }
+  },
+  "footer": {
+    "tagline": "Cotton processing and yarn manufacturing in Xorazm, Uzbekistan — built for international export partners.",
+    "companyTitle": "Company",
+    "productsTitle": "Products",
+    "resourcesTitle": "Resources",
+    "requestCatalog": "Request Catalog",
+    "certificates": "Quality & Certificates",
+    "rights": "All rights reserved."
+  }
+}

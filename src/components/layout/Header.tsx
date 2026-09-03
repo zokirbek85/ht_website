@@ -1,0 +1,88 @@
+"use client";
+
+import Image from "next/image";
+import { useState } from "react";
+import { useTranslations } from "next-intl";
+import { Link, usePathname } from "@/i18n/navigation";
+import { LangSwitch } from "./LangSwitch";
+
+const NAV_ITEMS = [
+  { href: "/about", key: "about" },
+  { href: "/production", key: "production" },
+  { href: "/products", key: "products" },
+  { href: "/quality", key: "quality" },
+  { href: "/export", key: "export" },
+  { href: "/sustainability", key: "sustainability" },
+  { href: "/news", key: "news" },
+  { href: "/contact", key: "contact" }
+] as const;
+
+export function Header() {
+  const t = useTranslations("nav");
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+
+  return (
+    <header className="sticky top-0 z-[100] border-b border-[var(--border)] bg-[var(--bg)]/90 backdrop-blur">
+      <div className="container-brand flex h-[76px] items-center gap-8">
+        <Link href="/" className="flex flex-shrink-0 items-center gap-3 text-[var(--text)] no-underline">
+          <Image src="/uploads/logo/1784123853563-logo.png" alt="Hazorasp-Textil" width={142} height={58} className="h-12 w-auto object-contain" priority />
+        </Link>
+
+        <nav
+          className={`font-display text-[0.78rem] font-medium uppercase tracking-wider md:mx-auto md:flex md:gap-7 ${
+            open
+              ? "fixed inset-x-0 top-[76px] bottom-0 flex flex-col gap-0 overflow-y-auto bg-[var(--bg)] p-6"
+              : "hidden"
+          } md:static md:flex md:bg-transparent md:p-0`}
+        >
+          {NAV_ITEMS.map((item) => {
+            const active = pathname === item.href;
+            return (
+              <Link
+                key={item.key}
+                href={item.href}
+                onClick={() => setOpen(false)}
+                className={`border-b border-[var(--border)] py-3.5 text-[var(--text-soft)] no-underline transition-colors hover:text-[var(--text)] md:border-none md:py-1 ${
+                  active ? "text-[var(--text)]" : ""
+                }`}
+              >
+                {t(item.key)}
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="flex flex-shrink-0 items-center gap-4">
+          <div className="hidden md:block">
+            <LangSwitch />
+          </div>
+          <Link
+            href="/contact"
+            className="btn btn-primary hidden !py-2.5 !px-5 !text-[0.72rem] md:inline-flex"
+          >
+            {t("contactCta")}
+          </Link>
+          <button
+            type="button"
+            aria-label={t("toggleMenu")}
+            aria-expanded={open}
+            onClick={() => setOpen((v) => !v)}
+            className="relative h-9 w-9 rounded-s border border-[var(--border-strong)] md:hidden"
+          >
+            <span
+              className={`absolute left-[9px] right-[9px] top-[17px] h-[1.5px] bg-[var(--text)] transition-transform ${
+                open ? "translate-y-[0px] rotate-45" : ""
+              }`}
+            />
+            <span
+              className={`absolute left-[9px] right-[9px] top-[23px] h-[1.5px] bg-[var(--text)] transition-transform ${
+                open ? "-translate-y-[6px] -rotate-45" : ""
+              }`}
+            />
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+}

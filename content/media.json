@@ -1,0 +1,112 @@
+[
+  {
+    "id": "046ce323-6b65-4f28-ab6b-fb6ac7fa5c83",
+    "category": "factory",
+    "filename": "1784618030478-spinning-floor.png",
+    "originalName": "spinning-floor.png",
+    "url": "/uploads/factory/1784618030478-spinning-floor.png",
+    "title": "Spinning Floor",
+    "mimeType": "image/png",
+    "size": 52787,
+    "uploadedAt": "2026-07-21T07:13:49.650Z"
+  },
+  {
+    "id": "80f096f5-e435-4c6d-9bc9-91a6d6d3f949",
+    "category": "factory",
+    "filename": "1784618029699-cotton-intake.png",
+    "originalName": "cotton-intake.png",
+    "url": "/uploads/factory/1784618029699-cotton-intake.png",
+    "title": "Cotton Intake",
+    "mimeType": "image/png",
+    "size": 57121,
+    "uploadedAt": "2026-07-21T07:13:49.708Z"
+  },
+  {
+    "id": "factory-building-2026",
+    "category": "factory",
+    "filename": "factory-building.png",
+    "originalName": "factory-building.png",
+    "url": "/uploads/factory/factory-building.png",
+    "title": "Hazorasp-Textil factory building",
+    "mimeType": "image/png",
+    "size": 5063816,
+    "uploadedAt": "2026-09-03T00:00:00.000Z"
+  },
+  {
+    "id": "fd48b24e-5f37-462e-8bfa-51e33f8ff690",
+    "category": "factory",
+    "filename": "1784618030223-quality-lab.png",
+    "originalName": "quality-lab.png",
+    "url": "/uploads/factory/1784618030223-quality-lab.png",
+    "title": "Quality Lab",
+    "mimeType": "image/png",
+    "size": 117263,
+    "uploadedAt": "2026-07-21T07:13:49.771Z"
+  },
+  {
+    "id": "b9454ca7-1162-4a41-8071-d3b1f78597cd",
+    "category": "team",
+    "filename": "1784618030171-team-collective.png",
+    "originalName": "team-collective.png",
+    "url": "/uploads/team/1784618030171-team-collective.png",
+    "title": "Team Collective",
+    "mimeType": "image/png",
+    "size": 84950,
+    "uploadedAt": "2026-07-21T07:13:49.800Z"
+  },
+  {
+    "id": "df9b55ff-b362-4c85-9db7-c32f697bd7b2",
+    "category": "gallery",
+    "filename": "1784618029988-cotton-field.png",
+    "originalName": "cotton-field.png",
+    "url": "/uploads/gallery/1784618029988-cotton-field.png",
+    "title": "Cotton Field",
+    "mimeType": "image/png",
+    "size": 122610,
+    "uploadedAt": "2026-07-21T07:13:49.817Z"
+  },
+  {
+    "id": "fc788d36-3b8d-4881-8a1b-b83df59e8470",
+    "category": "gallery",
+    "filename": "1784618030399-spinning-detail.png",
+    "originalName": "spinning-detail.png",
+    "url": "/uploads/gallery/1784618030399-spinning-detail.png",
+    "title": "Spinning Detail",
+    "mimeType": "image/png",
+    "size": 287930,
+    "uploadedAt": "2026-07-21T07:13:49.849Z"
+  },
+  {
+    "id": "e6396136-b911-4d5e-b5dd-4a13b4961a87",
+    "category": "gallery",
+    "filename": "1784618030044-export-shipping.png",
+    "originalName": "export-shipping.png",
+    "url": "/uploads/gallery/1784618030044-export-shipping.png",
+    "title": "Export Shipping",
+    "mimeType": "image/png",
+    "size": 49377,
+    "uploadedAt": "2026-07-21T07:13:49.863Z"
+  },
+  {
+    "id": "96724190-5963-4743-a0b6-37052e033700",
+    "category": "certificate",
+    "filename": "1784124440345-html-template.pdf",
+    "originalName": "html-template.pdf",
+    "url": "/uploads/certificate/1784124440345-html-template.pdf",
+    "title": "html-template.pdf",
+    "mimeType": "application/pdf",
+    "size": 158775,
+    "uploadedAt": "2026-07-15T14:07:20.347Z"
+  },
+  {
+    "id": "b37c477e-8d4f-4a93-828d-e287b58f6aa8",
+    "category": "logo",
+    "filename": "1784123853563-logo.png",
+    "originalName": "logo.png",
+    "url": "/uploads/logo/1784123853563-logo.png",
+    "title": "logo.png",
+    "mimeType": "image/png",
+    "size": 84718,
+    "uploadedAt": "2026-07-15T13:57:33.564Z"
+  }
+]
