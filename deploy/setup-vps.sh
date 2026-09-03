@@ -6,7 +6,7 @@ REPO_URL="${REPO_URL:?Set REPO_URL before running this script}"
 BRANCH="${BRANCH:-main}"
 
 apt-get update
-apt-get install -y git curl nginx
+apt-get install -y git curl nginx build-essential python3 pkg-config libvips-dev
 
 if ! command -v node >/dev/null 2>&1 || [ "$(node -p 'process.versions.node.split(".")[0]')" -lt 20 ]; then
   curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
@@ -22,7 +22,8 @@ else
 fi
 
 cd "$APP_DIR"
-npm ci
+SHARP_FORCE_GLOBAL_LIBVIPS=1 npm ci --include=optional
+SHARP_FORCE_GLOBAL_LIBVIPS=1 npm rebuild sharp --build-from-source
 npm run build
 
 touch "$APP_DIR/.env.local"
