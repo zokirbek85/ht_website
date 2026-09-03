@@ -1,13 +1,15 @@
 import { useTranslations } from "next-intl";
+import Image from "next/image";
 import { Link } from "@/i18n/navigation";
 import { FiberField } from "./FiberField";
 
-export function Hero() {
+export function Hero({ image }: { image?: string }) {
   const t = useTranslations("hero");
 
   return (
     <section className="overflow-clip">
       <div className="on-dark relative flex min-h-[min(92vh,900px)] items-end bg-[var(--surface-dark)] text-[var(--surface-dark-text)]">
+        {image && <Image src={image} alt="" fill sizes="100vw" className="object-cover" priority />}
         <FiberField />
         <div
           className="pointer-events-none absolute inset-0"

@@ -136,7 +136,9 @@
       { "value": 400, "suffix": " t", "label": "Oylik quvvat" },
       { "value": 100, "suffix": "%", "label": "Paxta tarkibi" }
     ],
-    "cta": "Eksport buyurtmasini muhokama qilish"
+    "cta": "Eksport buyurtmasini muhokama qilish",
+    "catalogCta": "Katalogni yuklab olish",
+    "certifications": "Sertifikatlar va sifat hujjatlari"
   },
   "sustainability": {
     "sectionNum": "07 / Barqarorlik",

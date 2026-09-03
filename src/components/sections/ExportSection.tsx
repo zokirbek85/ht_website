@@ -1,8 +1,10 @@
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { Counter } from "@/components/ui/Counter";
+import { listMediaByCategory } from "@/lib/media";
+import type { MediaItem } from "@/lib/media";
 
-export function ExportSection() {
+export function ExportSection({ certificates = [] }: { certificates?: MediaItem[] }) {
   const t = useTranslations("export");
   const stats = t.raw("stats") as { value: number; suffix?: string; label: string }[];
   const markets = t.raw("markets") as string[];
@@ -12,7 +14,7 @@ export function ExportSection() {
       <div className="container-brand grid items-center gap-10 lg:grid-cols-2 lg:gap-20">
         <div>
           <span className="section-num">{t("sectionNum")}</span>
-          <h2 className="mt-2 max-w-[14ch] text-[clamp(1.8rem,3.4vw,2.6rem)]">{t("title")}</h2>
+          <h2 className="heading-natural mt-2 max-w-[14ch] text-[clamp(1.8rem,3.4vw,2.6rem)]">{t("title")}</h2>
           <p className="mt-5 max-w-[52ch] text-[1.02rem] text-[var(--text-soft)]">{t("copy")}</p>
 
           <div className="mt-6 flex flex-wrap gap-2.5">
@@ -39,6 +41,9 @@ export function ExportSection() {
 
           <Link href="/contact" className="btn btn-primary mt-8 inline-flex">
             {t("cta")}
+          </Link>
+          <Link href="/contact" className="btn btn-outline ml-3 mt-8 inline-flex">
+            {t("catalogCta")}
           </Link>
         </div>
 
@@ -67,6 +72,18 @@ export function ExportSection() {
           </svg>
         </div>
       </div>
+      {certificates.length > 0 && (
+        <div className="container-brand mt-12 border-t border-[var(--border)] pt-6">
+          <p className="font-mono text-[0.68rem] uppercase tracking-[0.1em] text-[var(--text-soft)]">{t("certifications")}</p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            {certificates.map((certificate) => (
+              <a key={certificate.id} href={certificate.url} target="_blank" rel="noreferrer" className="rounded-s border border-[var(--border-strong)] px-3 py-2 font-mono text-[0.72rem] grayscale transition-[filter,border-color,color] hover:border-[var(--accent)] hover:text-[var(--accent)] hover:grayscale-0">
+                {certificate.title}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
     </section>
   );
 }

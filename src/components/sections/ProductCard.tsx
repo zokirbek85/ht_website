@@ -1,4 +1,5 @@
 import { useTranslations } from "next-intl";
+import Image from "next/image";
 import { Link } from "@/i18n/navigation";
 import type { Product, SpecLabels } from "@/lib/content-types";
 
@@ -12,7 +13,9 @@ export function ProductCard({ product }: { product: Product }) {
         <span className="absolute left-4 top-4 rounded-s bg-forest px-2.5 py-1 font-mono text-[0.64rem] tracking-wide text-white">
           {product.tag}
         </span>
-        <svg
+        {product.image ? (
+          <Image src={product.image} alt={product.name} fill sizes="(min-width: 1024px) 45vw, 100vw" className="object-cover transition-transform duration-500 group-hover:scale-105" />
+        ) : <svg
           width="86"
           height="110"
           viewBox="0 0 86 110"
@@ -33,7 +36,7 @@ export function ProductCard({ product }: { product: Product }) {
           {[20, 34, 50, 66, 82].map((y) => (
             <line key={y} x1={22 + y * 0.09} y1={y} x2={64 - y * 0.09} y2={y} stroke="white" strokeWidth="1" opacity="0.5" />
           ))}
-        </svg>
+        </svg>}
       </div>
 
       <div className="flex flex-1 flex-col gap-4 p-6">
@@ -50,7 +53,7 @@ export function ProductCard({ product }: { product: Product }) {
         </dl>
 
         <div className="mt-auto flex flex-wrap gap-3 pt-2">
-          <Link href="/contact" className="btn btn-outline flex-1 !py-2.5 !text-[0.7rem]">
+          <Link href={product.specPdf ?? "/contact"} {...(product.specPdf ? { download: true } : {})} className="btn btn-outline flex-1 !py-2.5 !text-[0.7rem]">
             {t("actions.spec")}
           </Link>
           <Link href="/contact" className="btn btn-primary flex-1 !py-2.5 !text-[0.7rem]">

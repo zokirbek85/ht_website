@@ -26,7 +26,7 @@ export function Header() {
     <header className="sticky top-0 z-[100] border-b border-[var(--border)] bg-[var(--bg)]/90 backdrop-blur">
       <div className="container-brand flex h-[76px] items-center gap-8">
         <Link href="/" className="flex flex-shrink-0 items-center gap-3 text-[var(--text)] no-underline">
-          <Image src="/uploads/logo/1784123853563-logo.png" alt="Hazorasp-Textil" width={142} height={58} className="h-12 w-auto object-contain" priority />
+          <Image src="/uploads/logo/1788427254322-1784123853563-logo.webp" alt="Hazorasp-Textil" width={142} height={58} className="h-12 w-auto object-contain" priority />
         </Link>
 
         <nav

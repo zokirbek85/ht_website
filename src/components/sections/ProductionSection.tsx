@@ -20,7 +20,7 @@ export function ProductionSection({
         <div className="mb-10 flex flex-wrap items-end justify-between gap-8 sm:mb-14">
           <div>
             <span className="section-num">{t("sectionNum")}</span>
-            <h2 className="mt-2 text-[clamp(1.8rem,3.4vw,2.6rem)]">{t("title")}</h2>
+            <h2 className="heading-natural mt-2 text-[clamp(1.8rem,3.4vw,2.6rem)]">{t("title")}</h2>
           </div>
           <p className="max-w-[38ch] text-[var(--text-soft)]">{t("lede")}</p>
         </div>

@@ -136,7 +136,9 @@
       { "value": 400, "suffix": " MT", "label": "Monthly capacity" },
       { "value": 100, "suffix": "%", "label": "Cotton composition" }
     ],
-    "cta": "Discuss an export order"
+    "cta": "Discuss an export order",
+    "catalogCta": "Download catalog",
+    "certifications": "Certifications and quality documents"
   },
   "sustainability": {
     "sectionNum": "07 / Sustainability",

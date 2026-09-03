@@ -9,6 +9,8 @@ export type Product = {
   twist: string;
   packaging: string;
   application: string;
+  image?: string;
+  specPdf?: string;
 };
 
 export type SpecLabels = {

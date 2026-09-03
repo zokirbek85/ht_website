@@ -34,9 +34,9 @@ export async function generateMetadata({
         { url: "/favicon.ico", sizes: "any" },
         { url: "/icons/icon-32.png", sizes: "32x32", type: "image/png" },
         { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
-        { url: "/uploads/logo/1784123853563-logo.png", sizes: "256x256", type: "image/png" }
+        { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" }
       ],
-      apple: [{ url: "/uploads/logo/1784123853563-logo.png", sizes: "256x256", type: "image/png" }]
+      apple: [{ url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" }]
     },
     manifest: "/site.webmanifest"
   };

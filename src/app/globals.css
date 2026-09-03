@@ -219,6 +219,11 @@ html {
     letter-spacing: 0.1em;
   }
 
+  .heading-natural {
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
   .reveal {
     opacity: 0;
     transform: translateY(28px);

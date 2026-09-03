@@ -15,7 +15,7 @@ export function Footer() {
         <div className="grid grid-cols-1 gap-10 border-b border-[var(--surface-dark-border)] pb-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div>
             <Link href="/" className="flex items-center gap-3 text-[var(--surface-dark-text)] no-underline">
-              <Image src="/uploads/logo/1784123853563-logo.png" alt="Hazorasp-Textil" width={142} height={58} className="h-12 w-auto object-contain" />
+              <Image src="/uploads/logo/1788427254322-1784123853563-logo.webp" alt="Hazorasp-Textil" width={142} height={58} className="h-12 w-auto object-contain" />
             </Link>
             <p className="mt-4 max-w-[34ch] text-[0.85rem]">{tFooter("tagline")}</p>
           </div>
