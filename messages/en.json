@@ -132,6 +132,7 @@
     "title": "Reliable textile partner from Uzbekistan",
     "copy": "Hazorasp-Textil supplies international textile markets, including Turkey, China and India. We are interested in long-term partnerships with knitting factories, textile mills, yarn importers and distributors.",
     "markets": ["Turkey", "China", "India"],
+    "origin": "Uzbekistan",
     "stats": [
       { "value": 400, "suffix": " MT", "label": "Monthly capacity" },
       { "value": 100, "suffix": "%", "label": "Cotton composition" }

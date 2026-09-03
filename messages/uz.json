@@ -132,6 +132,7 @@
     "title": "O'zbekistondan ishonchli tekstil hamkori",
     "copy": "Hazorasp-Textil xalqaro tekstil bozorlariga, jumladan Turkiya, Xitoy va Hindistonga mahsulot yetkazib beradi. Korxona trikotaj fabrikalari, tekstil korxonalari, ip importchilari va distribyutorlari bilan uzoq muddatli hamkorlikni rivojlantirishdan manfaatdor.",
     "markets": ["Turkiya", "Xitoy", "Hindiston"],
+    "origin": "O'zbekiston",
     "stats": [
       { "value": 400, "suffix": " t", "label": "Oylik quvvat" },
       { "value": 100, "suffix": "%", "label": "Paxta tarkibi" }
