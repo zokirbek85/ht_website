@@ -1,16 +1,8 @@
 import { useTranslations } from "next-intl";
-import Image from "next/image";
 import { Link } from "@/i18n/navigation";
 import { Reveal } from "@/components/ui/Reveal";
-import type { MediaItem } from "@/lib/media";
 
-export function AboutSection({
-  compact = false,
-  teamImage
-}: {
-  compact?: boolean;
-  teamImage?: MediaItem;
-}) {
+export function AboutSection({ compact = false }: { compact?: boolean }) {
   const t = useTranslations("about");
   const values = t.raw("values") as { title: string; desc: string }[];
   const ceoParagraphs = t("ceoMessage").split("\n\n");
@@ -84,19 +76,6 @@ export function AboutSection({
               <span className="mt-6 block font-mono text-[0.72rem] tracking-wide text-forest">
                 — {t("quoteAuthor")}
               </span>
-            </div>
-          </Reveal>
-        )}
-
-        {!compact && teamImage && (
-          <Reveal delay={160}>
-            <div className="mt-10">
-              <h3 className="mb-4 font-mono text-[0.72rem] uppercase tracking-[0.1em] text-[var(--text-soft)]">
-                Our team
-              </h3>
-              <div className="relative aspect-[4/3] max-w-[560px] overflow-hidden rounded-m border border-[var(--border)]">
-                <Image src={teamImage.url} alt={teamImage.title} fill sizes="(min-width: 640px) 560px, 100vw" className="object-cover" />
-              </div>
             </div>
           </Reveal>
         )}
