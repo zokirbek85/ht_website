@@ -27,6 +27,9 @@ export function Header({ logoUrl }: { logoUrl?: string }) {
       <div className="container-brand flex h-[76px] items-center gap-8">
         <Link href="/" className="flex flex-shrink-0 items-center gap-3 text-[var(--text)] no-underline">
           <Image src={logoUrl ?? "/icons/icon-192.png"} alt="Hazorasp-Textil" width={142} height={58} className="h-12 w-auto object-contain" priority />
+          <span className="font-display text-[1.05rem] font-bold uppercase tracking-wide text-[var(--text)]">
+            Hazorasp-Textil
+          </span>
         </Link>
 
         <nav
