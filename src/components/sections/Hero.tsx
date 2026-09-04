@@ -6,6 +6,7 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
 import { MotionLink } from "@/components/ui/MotionLink";
 import { FiberField } from "./FiberField";
+import { HeroStats } from "./HeroStats";
 
 const textUp = {
   hidden: { opacity: 0, y: 26 },
@@ -34,6 +35,7 @@ export function Hero({ image }: { image?: string }) {
               "radial-gradient(ellipse 60% 50% at 80% 15%, color-mix(in srgb, var(--brass) 30%, transparent), transparent 60%), linear-gradient(180deg, var(--surface-dark) 0%, color-mix(in srgb, var(--surface-dark) 88%, black 12%) 55%, var(--surface-dark) 100%)"
           }}
         />
+        <HeroStats />
         <motion.div
           className="container-brand relative z-[2] w-full pb-16 pt-32 sm:pt-40"
           style={{ y: contentY, opacity: contentOpacity }}
