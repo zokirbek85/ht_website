@@ -3,7 +3,9 @@
 import Image from "next/image";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { motion } from "framer-motion";
 import { Link, usePathname } from "@/i18n/navigation";
+import { MotionLink } from "@/components/ui/MotionLink";
 import { LangSwitch } from "./LangSwitch";
 
 const NAV_ITEMS = [
@@ -46,11 +48,18 @@ export function Header({ logoUrl }: { logoUrl?: string }) {
                 key={item.key}
                 href={item.href}
                 onClick={() => setOpen(false)}
-                className={`border-b border-[var(--border)] py-3.5 text-[var(--text-soft)] no-underline transition-colors hover:text-[var(--text)] md:border-none md:py-1 ${
+                className={`relative border-b border-[var(--border)] py-3.5 text-[var(--text-soft)] no-underline transition-colors hover:text-[var(--text)] md:border-none md:py-1 ${
                   active ? "text-[var(--text)]" : ""
                 }`}
               >
                 {t(item.key)}
+                {active && (
+                  <motion.span
+                    layoutId="nav-active"
+                    className="absolute inset-x-0 -bottom-px hidden h-[2px] bg-[var(--accent)] md:block"
+                    transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                  />
+                )}
               </Link>
             );
           })}
@@ -60,17 +69,18 @@ export function Header({ logoUrl }: { logoUrl?: string }) {
           <div className="hidden md:block">
             <LangSwitch />
           </div>
-          <Link
+          <MotionLink
             href="/contact"
             className="btn btn-primary hidden !py-2.5 !px-5 !text-[0.72rem] md:inline-flex"
           >
             {t("contactCta")}
-          </Link>
-          <button
+          </MotionLink>
+          <motion.button
             type="button"
             aria-label={t("toggleMenu")}
             aria-expanded={open}
             onClick={() => setOpen((v) => !v)}
+            whileTap={{ scale: 0.9 }}
             className="relative h-9 w-9 rounded-s border border-[var(--border-strong)] md:hidden"
           >
             <span
@@ -83,7 +93,7 @@ export function Header({ logoUrl }: { logoUrl?: string }) {
                 open ? "-translate-y-[6px] -rotate-45" : ""
               }`}
             />
-          </button>
+          </motion.button>
         </div>
       </div>
     </header>

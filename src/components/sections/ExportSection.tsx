@@ -1,6 +1,7 @@
 import { useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
 import { Counter } from "@/components/ui/Counter";
+import { Reveal } from "@/components/ui/Reveal";
+import { MotionLink } from "@/components/ui/MotionLink";
 import { listMediaByCategory } from "@/lib/media";
 import type { MediaItem } from "@/lib/media";
 import uzbekistanMap from "@svg-maps/uzbekistan";
@@ -14,7 +15,7 @@ export function ExportSection({ certificates = [] }: { certificates?: MediaItem[
   return (
     <section id="export" className="bg-[var(--bg-sunken)] py-16 sm:py-24">
       <div className="container-brand grid items-center gap-10 lg:grid-cols-2 lg:gap-20">
-        <div>
+        <Reveal>
           <span className="section-num">{t("sectionNum")}</span>
           <h2 className="heading-natural mt-2 max-w-[14ch] text-[clamp(1.8rem,3.4vw,2.6rem)]">{t("title")}</h2>
           <p className="mt-5 max-w-[52ch] text-[1.02rem] text-[var(--text-soft)]">{t("copy")}</p>
@@ -41,17 +42,17 @@ export function ExportSection({ certificates = [] }: { certificates?: MediaItem[
             ))}
           </div>
 
-          <Link href="/contact" className="btn btn-primary mt-8 inline-flex">
+          <MotionLink href="/contact" className="btn btn-primary mt-8 inline-flex">
             {t("cta")}
-          </Link>
-          <Link href="/contact" className="btn btn-outline ml-3 mt-8 inline-flex">
+          </MotionLink>
+          <MotionLink href="/contact" className="btn btn-outline ml-3 mt-8 inline-flex">
             {t("catalogCta")}
-          </Link>
-        </div>
+          </MotionLink>
+        </Reveal>
 
-        <div className="mx-auto aspect-[793/517] w-full max-w-[560px]">
+        <Reveal delay={100} className="mx-auto aspect-[793/517] w-full max-w-[560px]">
           <svg viewBox="-90 0 883 517" width="100%" height="100%" role="img" aria-labelledby="export-map-title">
-            <title id="export-map-title">{t("origin")} export routes</title>
+            <title id="export-map-title">{`${t("origin")} export routes`}</title>
             <g fill="none" stroke="var(--border-strong)" strokeWidth="1" opacity="0.55">
               <path d="M20 130H773" strokeDasharray="2 8" />
               <path d="M20 260H773" strokeDasharray="2 8" />
@@ -63,8 +64,8 @@ export function ExportSection({ certificates = [] }: { certificates?: MediaItem[
               <path d={`M${origin.x} ${origin.y} Q 500 360 716 470`} />
             </g>
             <g opacity="0.92" stroke="var(--accent-2)" strokeWidth="1.2">
-              {uzbekistanMap.locations.map((location: { id: string; path: string }) => (
-                <path key={location.id} d={location.path} fill={location.id === "xorazm" ? "var(--brass)" : "var(--forest)"} />
+              {uzbekistanMap.locations.map((location: { id: string; path: string }, i: number) => (
+                <path key={`${location.id}-${i}`} d={location.path} fill={location.id === "xorazm" ? "var(--brass)" : "var(--forest)"} />
               ))}
             </g>
             <g fill="var(--brass)" stroke="var(--bg-sunken)" strokeWidth="3">
@@ -80,7 +81,7 @@ export function ExportSection({ certificates = [] }: { certificates?: MediaItem[
               <text x="726" y="492">{markets[2] ?? ""}</text>
             </g>
           </svg>
-        </div>
+        </Reveal>
       </div>
       {certificates.length > 0 && (
         <div className="container-brand mt-12 border-t border-[var(--border)] pt-6">

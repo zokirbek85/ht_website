@@ -1,5 +1,7 @@
 import { useTranslations } from "next-intl";
 import { IconFlask, IconRuler, IconDrop, IconCheck } from "@/components/icons";
+import { Reveal } from "@/components/ui/Reveal";
+import { StaggerGroup, StaggerItem } from "@/components/ui/Stagger";
 import type { MediaItem } from "@/lib/media";
 
 const ITEM_ICONS = [IconFlask, IconRuler, IconDrop, IconCheck];
@@ -26,20 +28,20 @@ export function QualitySection({
         }}
       />
       <div className="container-brand relative">
-        <div className="mb-10 flex flex-wrap items-end justify-between gap-8 sm:mb-14">
+        <Reveal className="mb-10 flex flex-wrap items-end justify-between gap-8 sm:mb-14">
           <div>
             <span className="section-num">{t("sectionNum")}</span>
             <h2 className="heading-natural mt-2 text-[clamp(1.8rem,3.4vw,2.6rem)] text-[var(--surface-dark-text)]">{t("title")}</h2>
           </div>
           <p className="max-w-[38ch] text-[var(--surface-dark-text-soft)]">{t("lede")}</p>
-        </div>
+        </Reveal>
 
         <div className="grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-20">
-          <div className="flex flex-col">
+          <StaggerGroup className="flex flex-col">
             {items.map((item, i) => {
               const Icon = ITEM_ICONS[i % ITEM_ICONS.length]!;
               return (
-                <div
+                <StaggerItem
                   key={item.title}
                   className={`flex gap-5 py-5 ${i > 0 ? "border-t border-[var(--surface-dark-border)]" : ""} ${
                     i === items.length - 1 ? "border-b border-[var(--surface-dark-border)]" : ""
@@ -50,12 +52,12 @@ export function QualitySection({
                     <h3 className="text-[0.9rem] normal-case tracking-normal text-[var(--surface-dark-text)]">{item.title}</h3>
                     <p className="mt-1.5 text-[0.84rem] text-[var(--surface-dark-text-soft)]">{item.desc}</p>
                   </div>
-                </div>
+                </StaggerItem>
               );
             })}
-          </div>
+          </StaggerGroup>
 
-          <div className="rounded-m border border-[var(--surface-dark-border)] bg-white/[0.04] p-7">
+          <Reveal delay={120} className="rounded-m border border-[var(--surface-dark-border)] bg-white/[0.04] p-7">
             <h3 className="mb-5 font-mono text-[0.78rem] tracking-[0.1em] text-[var(--surface-dark-text-soft)]">
               {t("certPanelTitle")}
             </h3>
@@ -71,7 +73,7 @@ export function QualitySection({
                 </div>
               </div>
             ))}
-          </div>
+          </Reveal>
         </div>
 
         {uploadedCerts.length > 0 && (

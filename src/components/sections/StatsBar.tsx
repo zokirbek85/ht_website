@@ -1,5 +1,6 @@
 import { useTranslations } from "next-intl";
 import { Counter } from "@/components/ui/Counter";
+import { StaggerGroup, StaggerItem } from "@/components/ui/Stagger";
 import { yearsOfExperience } from "@/lib/company";
 
 export function StatsBar() {
@@ -9,9 +10,9 @@ export function StatsBar() {
 
   return (
     <section className="bg-[var(--forest-deep)] py-10 text-[var(--surface-dark-text)] sm:py-12">
-      <div className="container-brand grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-5 sm:gap-0">
+      <StaggerGroup className="container-brand grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-5 sm:gap-0">
         {items.map((stat, i) => (
-          <div
+          <StaggerItem
             key={stat.label}
             className={`px-0 sm:px-5 ${i > 0 ? "sm:border-l sm:border-[var(--surface-dark-border)]" : ""}`}
           >
@@ -21,9 +22,9 @@ export function StatsBar() {
             <div className="mt-2 font-display text-[0.7rem] uppercase tracking-wider text-[var(--surface-dark-text-soft)]">
               {stat.label}
             </div>
-          </div>
+          </StaggerItem>
         ))}
-      </div>
+      </StaggerGroup>
     </section>
   );
 }

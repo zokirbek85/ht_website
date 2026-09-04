@@ -1,5 +1,7 @@
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
+import { Reveal } from "@/components/ui/Reveal";
+import { StaggerGroup, StaggerItem } from "@/components/ui/Stagger";
 import type { NewsItem } from "@/lib/content-types";
 
 export function NewsSection({ items }: { items: NewsItem[] }) {
@@ -9,7 +11,7 @@ export function NewsSection({ items }: { items: NewsItem[] }) {
   return (
     <section id="news" className="bg-[var(--bg-sunken)] py-16 sm:py-24">
       <div className="container-brand">
-        <div className="mb-10 flex flex-wrap items-end justify-between gap-8 sm:mb-14">
+        <Reveal className="mb-10 flex flex-wrap items-end justify-between gap-8 sm:mb-14">
           <div>
             <span className="section-num">{t("sectionNum")}</span>
             <h2 className="heading-natural mt-2 text-[clamp(1.8rem,3.4vw,2.6rem)]">{t("title")}</h2>
@@ -17,13 +19,14 @@ export function NewsSection({ items }: { items: NewsItem[] }) {
           <Link href="/news" className="btn-ghost">
             {t("allLink")}
           </Link>
-        </div>
+        </Reveal>
 
         {items.length === 0 && <p className="text-[0.9rem] text-[var(--text-soft)]">{t("empty")}</p>}
 
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+        <StaggerGroup className="grid grid-cols-1 gap-6 sm:grid-cols-3">
           {items.map((item) => (
-            <article key={item.slug} className="card overflow-hidden">
+            <StaggerItem key={item.slug}>
+            <article className="card overflow-hidden">
               <div className="relative flex aspect-[16/10] items-end bg-gradient-to-br from-[var(--forest-deep)] to-forest p-4">
                 <span className="font-mono text-[0.68rem] tracking-wide text-[var(--accent-2)]">{item.category}</span>
               </div>
@@ -44,8 +47,9 @@ export function NewsSection({ items }: { items: NewsItem[] }) {
                 </Link>
               </div>
             </article>
+            </StaggerItem>
           ))}
-        </div>
+        </StaggerGroup>
       </div>
     </section>
   );

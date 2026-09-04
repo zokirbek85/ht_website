@@ -6,6 +6,7 @@ import { routing } from "@/i18n/routing";
 import { oswald, ptSans, plexMono } from "@/lib/fonts";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { PageTransition } from "@/components/motion/PageTransition";
 import { getSiteMedia } from "@/lib/site-media";
 import "../globals.css";
 
@@ -71,7 +72,9 @@ export default async function LocaleLayout({
             Skip to content
           </a>
           <Header logoUrl={logo?.url} />
-          <main id="main">{children}</main>
+          <main id="main">
+            <PageTransition>{children}</PageTransition>
+          </main>
           <Footer logoUrl={logo?.url} />
         </NextIntlClientProvider>
       </body>

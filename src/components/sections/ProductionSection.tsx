@@ -2,6 +2,7 @@ import { useTranslations } from "next-intl";
 import Image from "next/image";
 import { Link } from "@/i18n/navigation";
 import { ProcessTrack } from "./ProcessTrack";
+import { Reveal } from "@/components/ui/Reveal";
 import type { MediaItem } from "@/lib/media";
 
 export function ProductionSection({
@@ -17,13 +18,13 @@ export function ProductionSection({
   return (
     <section id="production" className="bg-[var(--bg-sunken)] py-16 sm:py-24">
       <div className="container-brand">
-        <div className="mb-10 flex flex-wrap items-end justify-between gap-8 sm:mb-14">
+        <Reveal className="mb-10 flex flex-wrap items-end justify-between gap-8 sm:mb-14">
           <div>
             <span className="section-num">{t("sectionNum")}</span>
             <h2 className="heading-natural mt-2 text-[clamp(1.8rem,3.4vw,2.6rem)]">{t("title")}</h2>
           </div>
           <p className="max-w-[38ch] text-[var(--text-soft)]">{t("lede")}</p>
-        </div>
+        </Reveal>
 
         <ProcessTrack steps={compact ? steps.slice(0, 3) : steps} />
 

@@ -1,16 +1,32 @@
+"use client";
+
 import { useTranslations } from "next-intl";
 import Image from "next/image";
-import { Link } from "@/i18n/navigation";
+import { motion, useScroll, useTransform } from "framer-motion";
+import { useRef } from "react";
+import { MotionLink } from "@/components/ui/MotionLink";
 import { FiberField } from "./FiberField";
+
+const textUp = {
+  hidden: { opacity: 0, y: 26 },
+  show: { opacity: 1, y: 0 }
+};
 
 export function Hero({ image }: { image?: string }) {
   const t = useTranslations("hero");
+  const sectionRef = useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({ target: sectionRef, offset: ["start start", "end start"] });
+  const bgY = useTransform(scrollYProgress, [0, 1], ["0%", "22%"]);
+  const contentY = useTransform(scrollYProgress, [0, 1], ["0%", "12%"]);
+  const contentOpacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
 
   return (
-    <section className="overflow-clip">
+    <section ref={sectionRef} className="overflow-clip">
       <div className="on-dark relative flex min-h-[min(92vh,900px)] items-end bg-[var(--surface-dark)] text-[var(--surface-dark-text)]">
-        {image && <Image src={image} alt="" fill sizes="100vw" className="object-cover" priority />}
-        <FiberField />
+        <motion.div className="absolute inset-0" style={{ y: bgY }}>
+          {image && <Image src={image} alt="" fill sizes="100vw" className="object-cover" priority />}
+          <FiberField />
+        </motion.div>
         <div
           className="pointer-events-none absolute inset-0"
           style={{
@@ -18,22 +34,44 @@ export function Hero({ image }: { image?: string }) {
               "radial-gradient(ellipse 60% 50% at 80% 15%, color-mix(in srgb, var(--brass) 30%, transparent), transparent 60%), linear-gradient(180deg, var(--surface-dark) 0%, color-mix(in srgb, var(--surface-dark) 88%, black 12%) 55%, var(--surface-dark) 100%)"
           }}
         />
-        <div className="container-brand relative z-[2] w-full pb-16 pt-32 sm:pt-40">
-          <span className="eyebrow">{t("eyebrow")}</span>
-          <h1 className="mt-4 max-w-[16ch] text-[clamp(2.5rem,6.4vw,5.2rem)] leading-[1.02] text-[var(--surface-dark-text)]">
+        <motion.div
+          className="container-brand relative z-[2] w-full pb-16 pt-32 sm:pt-40"
+          style={{ y: contentY, opacity: contentOpacity }}
+          initial="hidden"
+          animate="show"
+          transition={{ staggerChildren: 0.12, delayChildren: 0.1 }}
+        >
+          <motion.span variants={textUp} transition={{ duration: 0.6, ease: [0.22, 0.61, 0.36, 1] }} className="eyebrow">
+            {t("eyebrow")}
+          </motion.span>
+          <motion.h1
+            variants={textUp}
+            transition={{ duration: 0.7, ease: [0.22, 0.61, 0.36, 1] }}
+            className="mt-4 max-w-[16ch] text-[clamp(2.5rem,6.4vw,5.2rem)] leading-[1.02] text-[var(--surface-dark-text)]"
+          >
             {t("titleLine1")}
             <span className="block text-[var(--accent-2)]">{t("titleLine2")}</span>
-          </h1>
-          <p className="mt-6 max-w-[46ch] text-[1.12rem] text-[var(--surface-dark-text-soft)]">{t("sub")}</p>
-          <div className="mt-9 flex flex-wrap gap-4">
-            <Link href="/contact" className="btn btn-brass">
+          </motion.h1>
+          <motion.p
+            variants={textUp}
+            transition={{ duration: 0.7, ease: [0.22, 0.61, 0.36, 1] }}
+            className="mt-6 max-w-[46ch] text-[1.12rem] text-[var(--surface-dark-text-soft)]"
+          >
+            {t("sub")}
+          </motion.p>
+          <motion.div
+            variants={textUp}
+            transition={{ duration: 0.7, ease: [0.22, 0.61, 0.36, 1] }}
+            className="mt-9 flex flex-wrap gap-4"
+          >
+            <MotionLink href="/contact" className="btn btn-brass">
               {t("ctaPrimary")}
-            </Link>
-            <Link href="/contact" className="btn btn-outline">
+            </MotionLink>
+            <MotionLink href="/contact" className="btn btn-outline">
               {t("ctaSecondary")}
-            </Link>
-          </div>
-        </div>
+            </MotionLink>
+          </motion.div>
+        </motion.div>
         <div className="absolute bottom-6 right-6 z-[2] hidden items-center gap-3 font-mono text-[0.68rem] tracking-wide text-[var(--surface-dark-text-soft)] sm:flex">
           <span>{t("scrollLabel")}</span>
           <span className="relative h-px w-[34px] overflow-hidden bg-[var(--surface-dark-border)]">
