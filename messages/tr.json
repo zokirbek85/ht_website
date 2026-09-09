@@ -172,9 +172,27 @@
     "info": {
       "officeTitle": "Merkez ofis",
       "office": "45 Mustaqillik Caddesi, Hazarasp ilçesi, Harezm bölgesi, Özbekistan",
-      "salesTitle": "Satış ve ihracat",
-      "email": "ahmadjonbotirov593@gmail.com",
-      "phone": "+998 97 747 63 06",
+      "contactsTitle": "İletişim",
+      "contacts": [
+        {
+          "name": "Botirov Ahmadjon",
+          "role": "Üretimden Sorumlu Direktör Yardımcısı",
+          "email": "ahmadjonbotirov593@gmail.com",
+          "phones": ["+998 97 747 63 06"]
+        },
+        {
+          "name": "Otajonov Zokir",
+          "role": "Mali İşlerden Sorumlu Direktör Yardımcısı",
+          "email": "zokirbek@gmail.com",
+          "phones": ["+998 77 639 00 25"]
+        },
+        {
+          "name": "Hasan Huseyin Ogut",
+          "role": "İplik Fabrikası Müdürü",
+          "email": "h.ogut.h@gmail.com",
+          "phones": ["+998 94 161 27 00", "+90 535 236 25 48"]
+        }
+      ],
       "hoursTitle": "Çalışma saatleri",
       "hours": "09:00–18:00 (GMT+5)",
       "langTitle": "Diller",

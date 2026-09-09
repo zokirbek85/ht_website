@@ -172,9 +172,27 @@
     "info": {
       "officeTitle": "Bosh ofis",
       "office": "O'zbekiston, Xorazm viloyati, Hazorasp tumani, Mustaqillik ko'chasi, 45-uy",
-      "salesTitle": "Savdo va eksport",
-      "email": "ahmadjonbotirov593@gmail.com",
-      "phone": "+998 97 747 63 06",
+      "contactsTitle": "Kontaktlar",
+      "contacts": [
+        {
+          "name": "Botirov Ahmadjon",
+          "role": "Ishlab chiqarish bo'yicha direktor o'rinbosari",
+          "email": "ahmadjonbotirov593@gmail.com",
+          "phones": ["+998 97 747 63 06"]
+        },
+        {
+          "name": "Otajonov Zokir",
+          "role": "Moliyaviy masalalar bo'yicha direktor o'rinbosari",
+          "email": "zokirbek@gmail.com",
+          "phones": ["+998 77 639 00 25"]
+        },
+        {
+          "name": "Hasan Huseyin Ogut",
+          "role": "Ip yigiruv fabrikasi mudiri",
+          "email": "h.ogut.h@gmail.com",
+          "phones": ["+998 94 161 27 00", "+90 535 236 25 48"]
+        }
+      ],
       "hoursTitle": "Ish vaqti",
       "hours": "09:00–18:00 (GMT+5)",
       "langTitle": "Tillar",

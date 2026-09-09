@@ -172,9 +172,27 @@
     "info": {
       "officeTitle": "Head office",
       "office": "45 Mustaqillik Street, Hazorasp district, Xorazm region, Uzbekistan",
-      "salesTitle": "Sales & export",
-      "email": "ahmadjonbotirov593@gmail.com",
-      "phone": "+998 97 747 63 06",
+      "contactsTitle": "Contacts",
+      "contacts": [
+        {
+          "name": "Botirov Ahmadjon",
+          "role": "Deputy Director for Production",
+          "email": "ahmadjonbotirov593@gmail.com",
+          "phones": ["+998 97 747 63 06"]
+        },
+        {
+          "name": "Otajonov Zokir",
+          "role": "Deputy Director for Finance",
+          "email": "zokirbek@gmail.com",
+          "phones": ["+998 77 639 00 25"]
+        },
+        {
+          "name": "Hasan Huseyin Ogut",
+          "role": "Head of Spinning Mill",
+          "email": "h.ogut.h@gmail.com",
+          "phones": ["+998 94 161 27 00", "+90 535 236 25 48"]
+        }
+      ],
       "hoursTitle": "Working hours",
       "hours": "09:00–18:00 (GMT+5)",
       "langTitle": "Languages",
