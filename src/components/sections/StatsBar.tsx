@@ -9,7 +9,10 @@ export function StatsBar() {
   const items = [{ value: yearsOfExperience(), suffix: "+", label: t("yearsLabel") }, ...rest];
 
   return (
-    <section className="bg-[var(--forest-deep)] py-10 text-[var(--surface-dark-text)] sm:py-12">
+    <section
+      className="py-10 text-[var(--surface-dark-text)] sm:py-12"
+      style={{ background: "color-mix(in srgb, var(--forest-deep) 80%, transparent)" }}
+    >
       <StaggerGroup className="container-brand grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-5 sm:gap-0">
         {items.map((stat, i) => (
           <StaggerItem

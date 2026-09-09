@@ -48,7 +48,11 @@ export function ContactSection() {
   ];
 
   return (
-    <section id="contact" className="on-dark bg-[var(--surface-dark)] py-16 text-[var(--surface-dark-text)] sm:py-24">
+    <section
+      id="contact"
+      className="on-dark py-16 text-[var(--surface-dark-text)] sm:py-24"
+      style={{ background: "color-mix(in srgb, var(--surface-dark) 80%, transparent)" }}
+    >
       <div className="container-brand">
         <Reveal className="mb-10 flex flex-wrap items-end justify-between gap-8 sm:mb-14">
           <div>

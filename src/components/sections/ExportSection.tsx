@@ -13,7 +13,11 @@ export function ExportSection({ certificates = [] }: { certificates?: MediaItem[
   const origin = { x: 282, y: 312 };
 
   return (
-    <section id="export" className="bg-[var(--bg-sunken)] py-16 sm:py-24">
+    <section
+      id="export"
+      className="py-16 sm:py-24"
+      style={{ background: "color-mix(in srgb, var(--bg-sunken) 80%, transparent)" }}
+    >
       <div className="container-brand grid items-center gap-10 lg:grid-cols-2 lg:gap-20">
         <Reveal>
           <span className="section-num">{t("sectionNum")}</span>

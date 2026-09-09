@@ -6,6 +6,7 @@ import { routing } from "@/i18n/routing";
 import { oswald, ptSans, plexMono } from "@/lib/fonts";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { SiteBackground } from "@/components/layout/SiteBackground";
 import { PageTransition } from "@/components/motion/PageTransition";
 import { getSiteMedia } from "@/lib/site-media";
 import "../globals.css";
@@ -68,14 +69,17 @@ export default async function LocaleLayout({
     >
       <body>
         <NextIntlClientProvider messages={messages}>
-          <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:z-[200] focus:bg-forest focus:text-white focus:px-4 focus:py-2">
-            Skip to content
-          </a>
-          <Header logoUrl={logo?.url} />
-          <main id="main">
-            <PageTransition>{children}</PageTransition>
-          </main>
-          <Footer logoUrl={logo?.url} />
+          <SiteBackground />
+          <div style={{ position: "relative", zIndex: 1 }}>
+            <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:z-[200] focus:bg-forest focus:text-white focus:px-4 focus:py-2">
+              Skip to content
+            </a>
+            <Header logoUrl={logo?.url} />
+            <main id="main">
+              <PageTransition>{children}</PageTransition>
+            </main>
+            <Footer logoUrl={logo?.url} />
+          </div>
         </NextIntlClientProvider>
       </body>
     </html>

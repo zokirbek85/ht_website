@@ -16,7 +16,11 @@ export function ProductsSection({
   const shown = compact ? items.slice(0, 2) : items;
 
   return (
-    <section id="products" className="bg-[var(--bg)] py-16 sm:py-24">
+    <section
+      id="products"
+      className="py-16 sm:py-24"
+      style={{ background: "color-mix(in srgb, var(--bg) 80%, transparent)" }}
+    >
       <div className="container-brand">
         <Reveal className="mb-10 flex flex-wrap items-end justify-between gap-8 sm:mb-14">
           <div>

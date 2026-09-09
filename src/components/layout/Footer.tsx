@@ -10,7 +10,10 @@ export function Footer({ logoUrl }: { logoUrl?: string }) {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="bg-[var(--forest-deep)] pb-6 pt-16 text-[var(--surface-dark-text-soft)]">
+    <footer
+      className="pb-6 pt-16 text-[var(--surface-dark-text-soft)]"
+      style={{ background: "color-mix(in srgb, var(--forest-deep) 80%, transparent)" }}
+    >
       <div className="container-brand">
         <div className="grid grid-cols-1 gap-10 border-b border-[var(--surface-dark-border)] pb-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div>

@@ -19,7 +19,11 @@ export function QualitySection({
   const uploadedCerts = compact ? [] : certificates;
 
   return (
-    <section id="quality" className="on-dark relative overflow-hidden bg-[var(--surface-dark)] py-16 text-[var(--surface-dark-text)] sm:py-24">
+    <section
+      id="quality"
+      className="on-dark relative overflow-hidden py-16 text-[var(--surface-dark-text)] sm:py-24"
+      style={{ background: "color-mix(in srgb, var(--surface-dark) 80%, transparent)" }}
+    >
       <div
         className="pointer-events-none absolute inset-0"
         style={{

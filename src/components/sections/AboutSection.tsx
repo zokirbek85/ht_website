@@ -8,7 +8,11 @@ export function AboutSection({ compact = false }: { compact?: boolean }) {
   const ceoParagraphs = t("ceoMessage").split("\n\n");
 
   return (
-    <section id="about" className="bg-[var(--bg)] py-16 sm:py-24">
+    <section
+      id="about"
+      className="py-16 sm:py-24"
+      style={{ background: "color-mix(in srgb, var(--bg) 80%, transparent)" }}
+    >
       <div className="container-brand">
         <div className="mb-10 flex flex-wrap items-end justify-between gap-8 sm:mb-14">
           <div>

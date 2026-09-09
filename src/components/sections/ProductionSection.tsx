@@ -16,7 +16,11 @@ export function ProductionSection({
   const steps = t.raw("steps") as { index: string; title: string; desc: string; tech: string }[];
 
   return (
-    <section id="production" className="bg-[var(--bg-sunken)] py-16 sm:py-24">
+    <section
+      id="production"
+      className="py-16 sm:py-24"
+      style={{ background: "color-mix(in srgb, var(--bg-sunken) 80%, transparent)" }}
+    >
       <div className="container-brand">
         <Reveal className="mb-10 flex flex-wrap items-end justify-between gap-8 sm:mb-14">
           <div>
