@@ -34,10 +34,14 @@ export default async function TempReportPage({ params }: { params: Promise<{ tok
 
 function StatusPage({ title, message }: { title: string; message: string }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0b1220] px-6 text-center text-white">
+    <div
+      className="on-dark flex min-h-screen items-center justify-center px-6 text-center text-[var(--surface-dark-text)]"
+      style={{ background: "var(--surface-dark)" }}
+    >
       <div>
-        <h1 className="mb-2 text-xl font-semibold">{title}</h1>
-        <p className="text-white/60">{message}</p>
+        <div className="eyebrow justify-center">PTZ Analytics</div>
+        <h1 className="heading-natural mb-2 mt-3 font-display text-xl font-semibold text-white">{title}</h1>
+        <p className="text-[var(--surface-dark-text-soft)]">{message}</p>
       </div>
     </div>
   );

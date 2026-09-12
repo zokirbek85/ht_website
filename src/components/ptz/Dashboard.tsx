@@ -18,71 +18,71 @@ function fmtDate(iso: string | null | undefined): string {
   return `${d}.${m}.${y}`;
 }
 
-const STATUS_STYLE: Record<ForecastStatus, { label: string; bg: string; fg: string }> = {
-  GREEN: { label: "🟢 Режа бўйича", bg: "bg-emerald-50", fg: "text-emerald-700" },
-  YELLOW: { label: "🟡 Хавф остида", bg: "bg-amber-50", fg: "text-amber-700" },
-  RED: { label: "🔴 Режадан ортда", bg: "bg-red-50", fg: "text-red-700" },
-  UNKNOWN: { label: "⚪ Маълумот етарли эмас", bg: "bg-slate-100", fg: "text-slate-600" }
+const STATUS_STYLE: Record<ForecastStatus, { label: string; className: string }> = {
+  GREEN: { label: "🟢 Режа бўйича", className: "border-[#3f7a4a] bg-[color-mix(in_srgb,#2e7d3f_18%,transparent)] text-[#8fe6a0]" },
+  YELLOW: { label: "🟡 Хавф остида", className: "border-[#8a7a2e] bg-[color-mix(in_srgb,#a8901f_18%,transparent)] text-[#f0d778]" },
+  RED: { label: "🔴 Режадан ортда", className: "border-[#8a3a3a] bg-[color-mix(in_srgb,#b23a3a_18%,transparent)] text-[#f4a6a6]" },
+  UNKNOWN: { label: "⚪ Маълумот етарли эмас", className: "border-[var(--surface-dark-border)] bg-white/5 text-[var(--surface-dark-text-soft)]" }
 };
 
-function KpiCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
+function HeroStat({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="rounded-md border border-[var(--border,#e2e8f0)] bg-white p-4 shadow-sm">
-      <div className="text-[0.7rem] uppercase tracking-wide text-slate-500">{label}</div>
-      <div className="mt-1 text-2xl font-bold text-forest">{value}</div>
-      {sub && <div className="mt-0.5 text-xs text-slate-500">{sub}</div>}
+    <div className="px-0 sm:px-5">
+      <div className="font-display text-[clamp(1.3rem,2.6vw,1.9rem)] text-white">{value}</div>
+      <div className="mt-1.5 font-display text-[0.66rem] uppercase tracking-wider text-[var(--surface-dark-text-soft)]">
+        {label}
+      </div>
+      {sub && <div className="mt-0.5 font-mono text-[0.68rem] text-[var(--surface-dark-text-soft)]">{sub}</div>}
     </div>
   );
 }
 
 function ProgressBar({ pct }: { pct: number | null }) {
   const clamped = Math.max(0, Math.min(100, pct ?? 0));
-  const color = clamped >= 100 ? "bg-emerald-500" : clamped >= 60 ? "bg-forest-mid" : "bg-red-500";
+  const color = clamped >= 100 ? "#2e7d3f" : clamped >= 60 ? "var(--forest-mid)" : "#b23a3a";
   return (
-    <div className="h-4 w-full overflow-hidden rounded-full bg-slate-200">
-      <div className={`h-full ${color} transition-[width]`} style={{ width: `${clamped}%` }} />
+    <div className="h-3 w-full overflow-hidden rounded-s bg-[var(--bg-sunken)]">
+      <div className="h-full transition-[width]" style={{ width: `${clamped}%`, background: color }} />
     </div>
   );
 }
 
-function RankingTable({
-  title,
-  rows
-}: {
-  title: string;
-  rows: { name: string; region: string | null; planQty: number; cumulativeQty: number; dailyQty: number; completionPct: number | null }[];
-}) {
+type Row = { name: string; region: string | null; planQty: number; cumulativeQty: number; dailyQty: number; completionPct: number | null };
+
+function RankingTable({ title, rows }: { title: string; rows: Row[] }) {
   return (
-    <div className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
-      <h3 className="mb-3 text-sm font-semibold text-forest">{title}</h3>
+    <div className="card p-5">
+      <h3 className="heading-natural mb-3 font-display text-[0.85rem] font-semibold uppercase tracking-wide text-[var(--text)]">
+        {title}
+      </h3>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[480px] text-left text-xs">
+        <table className="w-full min-w-[480px] text-left text-[0.78rem]">
           <thead>
-            <tr className="border-b border-slate-200 text-slate-500">
-              <th className="py-1.5 pr-2">Номи</th>
-              <th className="py-1.5 pr-2">Ҳудуд</th>
-              <th className="py-1.5 pr-2 text-right">Режа</th>
-              <th className="py-1.5 pr-2 text-right">Қабул</th>
-              <th className="py-1.5 pr-2 text-right">Бугун</th>
-              <th className="py-1.5 text-right">%</th>
+            <tr className="font-mono text-[0.66rem] uppercase tracking-wide text-[var(--text-soft)]">
+              <th className="pb-2 pr-2 font-normal">Номи</th>
+              <th className="pb-2 pr-2 font-normal">Ҳудуд</th>
+              <th className="pb-2 pr-2 text-right font-normal">Режа</th>
+              <th className="pb-2 pr-2 text-right font-normal">Қабул</th>
+              <th className="pb-2 pr-2 text-right font-normal">Бугун</th>
+              <th className="pb-2 text-right font-normal">%</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-[var(--border)]">
             {rows.length === 0 && (
               <tr>
-                <td colSpan={6} className="py-3 text-center text-slate-400">
+                <td colSpan={6} className="py-4 text-center text-[var(--text-soft)]">
                   Маълумот йўқ
                 </td>
               </tr>
             )}
             {rows.map((r, i) => (
-              <tr key={`${r.name}-${i}`} className="border-b border-slate-100 last:border-0">
-                <td className="py-1.5 pr-2 font-medium text-ink">{r.name}</td>
-                <td className="py-1.5 pr-2 text-slate-500">{r.region ?? "—"}</td>
-                <td className="py-1.5 pr-2 text-right tabular-nums">{fmt(r.planQty)}</td>
-                <td className="py-1.5 pr-2 text-right tabular-nums">{fmt(r.cumulativeQty)}</td>
-                <td className="py-1.5 pr-2 text-right tabular-nums">{fmt(r.dailyQty)}</td>
-                <td className="py-1.5 text-right font-semibold tabular-nums">{fmtPct(r.completionPct)}</td>
+              <tr key={`${r.name}-${i}`}>
+                <td className="py-2 pr-2 font-medium text-[var(--text)]">{r.name}</td>
+                <td className="py-2 pr-2 text-[var(--text-soft)]">{r.region ?? "—"}</td>
+                <td className="py-2 pr-2 text-right tabular-nums text-[var(--text)]">{fmt(r.planQty)}</td>
+                <td className="py-2 pr-2 text-right tabular-nums text-[var(--text)]">{fmt(r.cumulativeQty)}</td>
+                <td className="py-2 pr-2 text-right tabular-nums text-[var(--text)]">{fmt(r.dailyQty)}</td>
+                <td className="py-2 text-right font-semibold tabular-nums text-[var(--text)]">{fmtPct(r.completionPct)}</td>
               </tr>
             ))}
           </tbody>
@@ -94,13 +94,12 @@ function RankingTable({
 
 function TrendChart({ points }: { points: { date: string; cumulativeQty: number; dailyQty: number }[] }) {
   if (points.length < 2) {
-    return <p className="text-sm text-slate-500">Тренд учун етарли тарихий маълумот йўқ.</p>;
+    return <p className="text-sm text-[var(--text-soft)]">Тренд учун етарли тарихий маълумот йўқ.</p>;
   }
   const width = 640;
   const height = 140;
   const padding = 8;
   const maxDaily = Math.max(...points.map((p) => p.dailyQty), 1);
-
   const barWidth = (width - padding * 2) / points.length;
 
   return (
@@ -110,11 +109,9 @@ function TrendChart({ points }: { points: { date: string; cumulativeQty: number;
         const x = padding + i * barWidth;
         const y = height - padding - barHeight;
         return (
-          <g key={p.date}>
-            <rect x={x + 2} y={y} width={Math.max(barWidth - 4, 2)} height={barHeight} fill="#075F9F" rx={1}>
-              <title>{`${p.date}: ${fmt(p.dailyQty)} т`}</title>
-            </rect>
-          </g>
+          <rect key={p.date} x={x + 2} y={y} width={Math.max(barWidth - 4, 2)} height={barHeight} fill="var(--forest-mid)" rx={1}>
+            <title>{`${p.date}: ${fmt(p.dailyQty)} т`}</title>
+          </rect>
         );
       })}
     </svg>
@@ -130,66 +127,97 @@ export function Dashboard({ bundle }: { bundle: ReportBundle }) {
   const trend = getOverallTrend().slice(-14);
 
   return (
-    <div className="min-h-screen bg-cotton px-4 py-8 text-ink sm:px-8">
-      <div className="mx-auto max-w-[1200px] space-y-6">
-        <header className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="font-display text-xl font-bold text-forest">HAZORASP-TEXTIL · PTZ Аналитика</h1>
-            <p className="text-sm text-slate-500">Ҳисобот санаси: {fmtDate(bundle.report.reportDate)}</p>
+    <div className="min-h-screen bg-[var(--bg)]">
+      <header
+        className="on-dark text-[var(--surface-dark-text)]"
+        style={{ background: "color-mix(in srgb, var(--forest-deep) 92%, transparent)" }}
+      >
+        <div className="container-brand py-8 sm:py-10">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="eyebrow">PTZ Analytics</div>
+            <span
+              className={`rounded-s border px-3 py-1 font-display text-[0.72rem] font-semibold uppercase tracking-wide ${status.className}`}
+            >
+              {status.label}
+            </span>
           </div>
-          <span className={`rounded-full px-3 py-1 text-sm font-semibold ${status.bg} ${status.fg}`}>{status.label}</span>
-        </header>
+          <h1 className="heading-natural mt-2 font-display text-[clamp(1.4rem,3vw,2rem)] font-semibold text-white">
+            HAZORASP-TEXTIL
+          </h1>
+          <p className="mt-1 font-mono text-[0.78rem] text-[var(--surface-dark-text-soft)]">
+            Ҳисобот санаси: {fmtDate(bundle.report.reportDate)}
+          </p>
 
-        <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          <KpiCard label="Умумий режа" value={`${fmt(bundle.overall.planQty)} т`} />
-          <KpiCard label="Жами қабул" value={`${fmt(bundle.overall.cumulativeQty)} т`} />
-          <KpiCard label="Бажарилиши" value={fmtPct(bundle.forecast.completionPct)} />
-          <KpiCard
-            label="Бугунги қабул"
-            value={`${fmt(bundle.overall.dailyQty)} т`}
-            sub={growthPct != null ? `${growthPct >= 0 ? "+" : ""}${fmt(growthPct)}% кечагига нисбатан` : undefined}
-          />
-          <KpiCard label="Қолдиқ" value={`${fmt(bundle.forecast.remainingQty)} т`} />
-          <KpiCard label="Керакли темп" value={`${fmt(bundle.forecast.requiredDailyRate)} т/кун`} />
-          <KpiCard label="Амалдаги темп" value={`${fmt(bundle.forecast.currentRunRate)} т/кун`} />
-          <KpiCard label="Прогноз санаси" value={fmtDate(bundle.forecast.forecastDate)} />
-          <KpiCard label="Муддат" value={fmtDate(bundle.forecast.deadline)} />
-          <KpiCard label="Огоҳлантиришлар" value={String(bundle.warningMessages.length)} />
+          <div className="mt-8 grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-5 sm:gap-0">
+            <HeroStat label="Умумий режа" value={`${fmt(bundle.overall.planQty)} т`} />
+            <HeroStat label="Жами қабул" value={`${fmt(bundle.overall.cumulativeQty)} т`} />
+            <HeroStat label="Бажарилиши" value={fmtPct(bundle.forecast.completionPct)} />
+            <HeroStat
+              label="Бугунги қабул"
+              value={`${fmt(bundle.overall.dailyQty)} т`}
+              sub={growthPct != null ? `${growthPct >= 0 ? "+" : ""}${fmt(growthPct)}% кечагига нисбатан` : undefined}
+            />
+            <HeroStat label="Прогноз санаси" value={fmtDate(bundle.forecast.forecastDate)} />
+          </div>
+        </div>
+      </header>
+
+      <main className="container-brand space-y-6 py-8 sm:py-10">
+        <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            ["Қолдиқ", `${fmt(bundle.forecast.remainingQty)} т`],
+            ["Керакли темп", `${fmt(bundle.forecast.requiredDailyRate)} т/кун`],
+            ["Амалдаги темп", `${fmt(bundle.forecast.currentRunRate)} т/кун`],
+            ["Муддат", fmtDate(bundle.forecast.deadline)]
+          ].map(([label, value]) => (
+            <div key={label} className="card p-4">
+              <div className="font-mono text-[0.66rem] uppercase tracking-wide text-[var(--text-soft)]">{label}</div>
+              <div className="mt-1 font-display text-[1.15rem] font-semibold text-[var(--text)]">{value}</div>
+            </div>
+          ))}
         </section>
 
-        <section className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
-          <h2 className="mb-2 text-sm font-semibold text-forest">Режа бажарилиши</h2>
+        <section className="card p-5">
+          <h2 className="heading-natural mb-3 font-display text-[0.85rem] font-semibold uppercase tracking-wide text-[var(--text)]">
+            Режа бажарилиши
+          </h2>
           <ProgressBar pct={bundle.forecast.completionPct} />
         </section>
 
-        <section className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
-          <h2 className="mb-3 text-sm font-semibold text-forest">Кунлик қабул тренди (сўнгги {trend.length} ҳисобот)</h2>
+        <section className="card p-5">
+          <h2 className="heading-natural mb-3 font-display text-[0.85rem] font-semibold uppercase tracking-wide text-[var(--text)]">
+            Кунлик қабул тренди <span className="text-[var(--text-soft)]">(сўнгги {trend.length} ҳисобот)</span>
+          </h2>
           <TrendChart points={trend} />
         </section>
 
-        <section className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
-          <h2 className="mb-3 text-sm font-semibold text-forest">Шартнома турлари бўйича</h2>
+        <section className="card p-5">
+          <h2 className="heading-natural mb-3 font-display text-[0.85rem] font-semibold uppercase tracking-wide text-[var(--text)]">
+            Шартнома турлари бўйича
+          </h2>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[560px] text-left text-xs">
+            <table className="w-full min-w-[560px] text-left text-[0.78rem]">
               <thead>
-                <tr className="border-b border-slate-200 text-slate-500">
-                  <th className="py-1.5 pr-2">Тур</th>
-                  <th className="py-1.5 pr-2 text-right">Режа</th>
-                  <th className="py-1.5 pr-2 text-right">Қабул</th>
-                  <th className="py-1.5 pr-2 text-right">%</th>
-                  <th className="py-1.5 pr-2 text-right">Бугун</th>
-                  <th className="py-1.5 text-right">Прогноз</th>
+                <tr className="font-mono text-[0.66rem] uppercase tracking-wide text-[var(--text-soft)]">
+                  <th className="pb-2 pr-2 font-normal">Тур</th>
+                  <th className="pb-2 pr-2 text-right font-normal">Режа</th>
+                  <th className="pb-2 pr-2 text-right font-normal">Қабул</th>
+                  <th className="pb-2 pr-2 text-right font-normal">%</th>
+                  <th className="pb-2 pr-2 text-right font-normal">Бугун</th>
+                  <th className="pb-2 text-right font-normal">Прогноз</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-[var(--border)]">
                 {bundle.contractTypes.map((ct) => (
-                  <tr key={ct.contractType} className="border-b border-slate-100 last:border-0">
-                    <td className="py-1.5 pr-2 font-medium">{CONTRACT_TYPE_LABELS_UZ[ct.contractType as ContractType]}</td>
-                    <td className="py-1.5 pr-2 text-right tabular-nums">{fmt(ct.planQty)}</td>
-                    <td className="py-1.5 pr-2 text-right tabular-nums">{fmt(ct.cumulativeQty)}</td>
-                    <td className="py-1.5 pr-2 text-right font-semibold tabular-nums">{fmtPct(ct.completionPct)}</td>
-                    <td className="py-1.5 pr-2 text-right tabular-nums">{fmt(ct.dailyQty)}</td>
-                    <td className="py-1.5 text-right tabular-nums">{fmtDate(ct.forecast.forecastDate)}</td>
+                  <tr key={ct.contractType}>
+                    <td className="py-2 pr-2 font-medium text-[var(--text)]">
+                      {CONTRACT_TYPE_LABELS_UZ[ct.contractType as ContractType]}
+                    </td>
+                    <td className="py-2 pr-2 text-right tabular-nums text-[var(--text)]">{fmt(ct.planQty)}</td>
+                    <td className="py-2 pr-2 text-right tabular-nums text-[var(--text)]">{fmt(ct.cumulativeQty)}</td>
+                    <td className="py-2 pr-2 text-right font-semibold tabular-nums text-[var(--text)]">{fmtPct(ct.completionPct)}</td>
+                    <td className="py-2 pr-2 text-right tabular-nums text-[var(--text)]">{fmt(ct.dailyQty)}</td>
+                    <td className="py-2 text-right tabular-nums text-[var(--text-soft)]">{fmtDate(ct.forecast.forecastDate)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -206,12 +234,14 @@ export function Dashboard({ bundle }: { bundle: ReportBundle }) {
 
         <RankingTable title="Риск остидаги фермерлар (бажарилиши < 50%)" rows={bundle.riskFarmers} />
 
-        <section className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
-          <h2 className="mb-2 text-sm font-semibold text-forest">Маълумот сифати бўйича огоҳлантиришлар</h2>
+        <section className="card p-5">
+          <h2 className="heading-natural mb-3 font-display text-[0.85rem] font-semibold uppercase tracking-wide text-[var(--text)]">
+            Маълумот сифати бўйича огоҳлантиришлар
+          </h2>
           {bundle.warningMessages.length === 0 ? (
-            <p className="text-sm text-slate-500">Огоҳлантиришлар йўқ.</p>
+            <p className="text-sm text-[var(--text-soft)]">Огоҳлантиришлар йўқ.</p>
           ) : (
-            <ul className="list-disc space-y-1 pl-5 text-sm text-slate-600">
+            <ul className="list-disc space-y-1 pl-5 text-[0.82rem] text-[var(--text-soft)]">
               {bundle.warningMessages.slice(0, 30).map((w, i) => (
                 <li key={i}>{w}</li>
               ))}
@@ -219,10 +249,10 @@ export function Dashboard({ bundle }: { bundle: ReportBundle }) {
           )}
         </section>
 
-        <footer className="pb-6 text-center text-xs text-slate-400">
+        <footer className="pb-6 text-center font-mono text-[0.7rem] text-[var(--text-soft)]">
           Ушбу ҳавола вақтинчалик ва фақат чекланган вақт давомида амал қилади. HAZORASP-TEXTIL PTZ Analytics.
         </footer>
-      </div>
+      </main>
     </div>
   );
 }
