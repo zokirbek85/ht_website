@@ -6,7 +6,7 @@ import { listAllReports } from "@/lib/ptz/analytics";
 import { listTelegramUsers } from "@/lib/ptz/telegramUsers";
 import { listAuditLog } from "@/lib/ptz/audit";
 import { listWarningsForReport } from "@/lib/ptz/warnings";
-import { removePtzUser } from "@/app/admin/ptz/actions";
+import { removePtzUser, reprocessPtzReport } from "@/app/admin/ptz/actions";
 
 function fmtDate(iso: string): string {
   const [y, m, d] = iso.split("-");
@@ -87,26 +87,37 @@ export default async function AdminPtzPage() {
                   <th className="px-3 py-2">Active</th>
                   <th className="px-3 py-2">Warnings</th>
                   <th className="px-3 py-2">Errors</th>
+                  <th className="px-3 py-2" />
                 </tr>
               </thead>
               <tbody>
                 {reports.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-3 py-4 text-center text-[var(--text-soft)]">
+                    <td colSpan={7} className="px-3 py-4 text-center text-[var(--text-soft)]">
                       No reports imported yet.
                     </td>
                   </tr>
                 )}
-                {reports.map((r) => (
-                  <tr key={r.id} className="border-t border-[var(--border)] align-top">
-                    <td className="px-3 py-2">{fmtDate(r.reportDate)}</td>
-                    <td className="px-3 py-2">{r.sourceFilename}</td>
-                    <td className="px-3 py-2">{r.status}</td>
-                    <td className="px-3 py-2">{r.isActive ? "yes" : "superseded"}</td>
-                    <td className="px-3 py-2">{r.warningCount}</td>
-                    <td className="px-3 py-2">{r.errorCount}</td>
-                  </tr>
-                ))}
+                {reports.map((r) => {
+                  const reprocessWithId = reprocessPtzReport.bind(null, r.id);
+                  return (
+                    <tr key={r.id} className="border-t border-[var(--border)] align-top">
+                      <td className="px-3 py-2">{fmtDate(r.reportDate)}</td>
+                      <td className="px-3 py-2">{r.sourceFilename}</td>
+                      <td className="px-3 py-2">{r.status}</td>
+                      <td className="px-3 py-2">{r.isActive ? "yes" : "superseded"}</td>
+                      <td className="px-3 py-2">{r.warningCount}</td>
+                      <td className="px-3 py-2">{r.errorCount}</td>
+                      <td className="px-3 py-2 text-right">
+                        <form action={reprocessWithId}>
+                          <button type="submit" className="text-[0.75rem] text-forest hover:underline">
+                            Reprocess
+                          </button>
+                        </form>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

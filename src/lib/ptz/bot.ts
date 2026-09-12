@@ -1,5 +1,5 @@
 import { logAudit } from "./audit.ts";
-import { importExcelReport } from "./importer.ts";
+import { importExcelReport, reprocessReport } from "./importer.ts";
 import { generatePdfReport } from "./pdf.ts";
 import { buildReportBundle, type ReportBundle } from "./reportBundle.ts";
 import { downloadTelegramFile, sendDocument, sendMessage, type TelegramUpdate } from "./telegram.ts";
@@ -97,6 +97,7 @@ const HELP_TEXT = [
   "/today — bugungi qisqa xulosa",
   "/history — so'nggi hisobotlar ro'yxati",
   "/dashboard — yangi vaqtinchalik dashboard havolasi",
+  "/reprocess — oxirgi hisobotni saqlangan asl fayldan qayta tahlil qilish (faqat admin, parser yangilanganda foydali)",
   "/settings — joriy sozlamalar (faqat admin)",
   "",
   "Excel faylni shu botga yuborsangiz, avtomatik tahlil qilinadi."
@@ -242,6 +243,38 @@ async function handleCommand(
           "\n"
         )
       );
+      return;
+    }
+
+    case "/reprocess": {
+      if (role !== "admin") {
+        await sendMessage(chatId, "❌ Bu buyruq faqat administratorlar uchun.");
+        return;
+      }
+      const latest = getLatestActiveReport();
+      if (!latest) {
+        await sendMessage(chatId, "Hozircha hech qanday hisobot yuklanmagan.");
+        return;
+      }
+      await sendMessage(chatId, "🔄 Hisobot saqlangan asl fayldan qayta tahlil qilinmoqda...");
+      const outcome = await reprocessReport(latest.id, { telegramId, username: null });
+      if (outcome.status === "failed") {
+        await sendMessage(
+          chatId,
+          ["❌ Qayta tahlil qilib bo'lmadi.", ...outcome.warnings.slice(0, 5).map((w) => `• ${w.message}`)].join("\n")
+        );
+        return;
+      }
+      const bundle = buildReportBundle(outcome.reportId);
+      if (!bundle) {
+        await sendMessage(chatId, "❌ Qayta tahlildan so'ng hisobotni tayyorlashda xato yuz berdi.");
+        return;
+      }
+      await sendMessage(
+        chatId,
+        `✅ Qayta tahlil tugadi: ${outcome.farmerCount} fermer, ${outcome.warnings.length} ogohlantirish.`
+      );
+      await sendReportPackage(chatId, telegramId, bundle);
       return;
     }
 

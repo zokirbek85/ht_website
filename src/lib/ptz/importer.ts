@@ -1,10 +1,11 @@
 import { createHash } from "node:crypto";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { dataDir, getDb, PARSER_VERSION, SCHEMA_VERSION } from "./db.ts";
 import { parseWorkbook } from "./parser.ts";
 import { logAudit } from "./audit.ts";
 import { SERIES, type ImportWarning, type ParsedFarmerRow, type Series } from "./types.ts";
+import type { DatabaseSync } from "node:sqlite";
 
 export type ImportOutcome =
   | { status: "duplicate"; reportId: number; reportDate: string }
@@ -101,86 +102,7 @@ export async function importExcelReport(
     );
     const reportId = Number(info.lastInsertRowid);
 
-    const upsertMetric = db.prepare(
-      `INSERT INTO farmer_metrics
-        (report_id, farmer_id, series, plan_qty, source_daily_qty, source_cumulative_qty, calculated_daily_delta, completion_pct)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT(report_id, farmer_id, series) DO UPDATE SET
-         plan_qty = excluded.plan_qty,
-         source_daily_qty = excluded.source_daily_qty,
-         source_cumulative_qty = excluded.source_cumulative_qty,
-         calculated_daily_delta = excluded.calculated_daily_delta,
-         completion_pct = excluded.completion_pct`
-    );
-    const previousCumStmt = db.prepare(
-      `SELECT fm.source_cumulative_qty AS cum
-       FROM farmer_metrics fm
-       JOIN reports r ON r.id = fm.report_id
-       WHERE fm.farmer_id = ? AND fm.series = ? AND r.is_active = 1 AND r.report_date < ?
-       ORDER BY r.report_date DESC LIMIT 1`
-    );
-
-    for (const row of parsed.rows) {
-      const regionId = row.region ? getOrCreateRegion(row.region) : null;
-      const farmerId = getOrCreateFarmer(row.farmer, regionId);
-
-      for (const series of SERIES) {
-        const values = row.metrics[series];
-        if (!values) continue;
-
-        const planQty = values.planQty ?? null;
-        const cumulativeQty = values.sourceCumulativeQty ?? null;
-        let completionPct = values.completionPct ?? null;
-
-        if (completionPct == null && planQty != null && planQty !== 0 && cumulativeQty != null) {
-          completionPct = (cumulativeQty / planQty) * 100;
-        } else if (completionPct == null && planQty === 0 && cumulativeQty != null) {
-          warnings.push({
-            severity: "WARNING",
-            code: "PLAN_IS_ZERO",
-            message: `Plan is zero for "${row.farmer}" (${series}); completion % cannot be computed.`,
-            context: { farmer: row.farmer, series }
-          });
-        }
-
-        const previous = previousCumStmt.get(farmerId, series, parsed.reportDate) as
-          | { cum: number | null }
-          | undefined;
-
-        let calculatedDelta: number | null = null;
-        if (previous && previous.cum != null && cumulativeQty != null) {
-          calculatedDelta = cumulativeQty - previous.cum;
-        }
-
-        if (
-          calculatedDelta != null &&
-          values.sourceDailyQty != null &&
-          Math.abs(calculatedDelta - values.sourceDailyQty) >
-            Math.max(CONSISTENCY_ABS_THRESHOLD, CONSISTENCY_REL_THRESHOLD * Math.abs(values.sourceDailyQty))
-        ) {
-          warnings.push({
-            severity: "WARNING",
-            code: "DATA_CONSISTENCY_WARNING",
-            message: `"Бир кунда" (${values.sourceDailyQty}) does not match the calculated delta (${calculatedDelta.toFixed(
-              2
-            )}) for "${row.farmer}" (${series}).`,
-            context: { farmer: row.farmer, series, sourceDaily: values.sourceDailyQty, calculatedDelta }
-          });
-        }
-
-        upsertMetric.run(
-          reportId,
-          farmerId,
-          series,
-          planQty,
-          values.sourceDailyQty ?? null,
-          cumulativeQty,
-          calculatedDelta,
-          completionPct
-        );
-      }
-    }
-
+    writeFarmerMetrics(db, reportId, parsed.reportDate, parsed.rows, warnings);
     checkTotalsConsistency(reportId, warnings);
 
     const finalErrorCount = warnings.filter((w) => w.severity === "ERROR").length;
@@ -210,6 +132,176 @@ export async function importExcelReport(
     });
 
     return { status, reportId, reportDate: parsed.reportDate, warnings, farmerCount: parsed.rows.length };
+  } catch (err) {
+    db.exec("ROLLBACK");
+    throw err;
+  }
+}
+
+function writeFarmerMetrics(
+  db: DatabaseSync,
+  reportId: number,
+  reportDate: string,
+  rows: ParsedFarmerRow[],
+  warnings: ImportWarning[]
+): void {
+  const upsertMetric = db.prepare(
+    `INSERT INTO farmer_metrics
+      (report_id, farmer_id, series, plan_qty, source_daily_qty, source_cumulative_qty, calculated_daily_delta, completion_pct)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(report_id, farmer_id, series) DO UPDATE SET
+       plan_qty = excluded.plan_qty,
+       source_daily_qty = excluded.source_daily_qty,
+       source_cumulative_qty = excluded.source_cumulative_qty,
+       calculated_daily_delta = excluded.calculated_daily_delta,
+       completion_pct = excluded.completion_pct`
+  );
+  const previousCumStmt = db.prepare(
+    `SELECT fm.source_cumulative_qty AS cum
+     FROM farmer_metrics fm
+     JOIN reports r ON r.id = fm.report_id
+     WHERE fm.farmer_id = ? AND fm.series = ? AND r.is_active = 1 AND r.report_date < ?
+     ORDER BY r.report_date DESC LIMIT 1`
+  );
+
+  for (const row of rows) {
+    const regionId = row.region ? getOrCreateRegion(row.region) : null;
+    const farmerId = getOrCreateFarmer(row.farmer, regionId);
+
+    for (const series of SERIES) {
+      const values = row.metrics[series];
+      if (!values) continue;
+
+      const planQty = values.planQty ?? null;
+      const cumulativeQty = values.sourceCumulativeQty ?? null;
+      let completionPct = values.completionPct ?? null;
+
+      if (completionPct == null && planQty != null && planQty !== 0 && cumulativeQty != null) {
+        completionPct = (cumulativeQty / planQty) * 100;
+      } else if (completionPct == null && planQty === 0 && cumulativeQty != null) {
+        warnings.push({
+          severity: "WARNING",
+          code: "PLAN_IS_ZERO",
+          message: `Plan is zero for "${row.farmer}" (${series}); completion % cannot be computed.`,
+          context: { farmer: row.farmer, series }
+        });
+      }
+
+      const previous = previousCumStmt.get(farmerId, series, reportDate) as { cum: number | null } | undefined;
+
+      let calculatedDelta: number | null = null;
+      if (previous && previous.cum != null && cumulativeQty != null) {
+        calculatedDelta = cumulativeQty - previous.cum;
+      }
+
+      if (
+        calculatedDelta != null &&
+        values.sourceDailyQty != null &&
+        Math.abs(calculatedDelta - values.sourceDailyQty) >
+          Math.max(CONSISTENCY_ABS_THRESHOLD, CONSISTENCY_REL_THRESHOLD * Math.abs(values.sourceDailyQty))
+      ) {
+        warnings.push({
+          severity: "WARNING",
+          code: "DATA_CONSISTENCY_WARNING",
+          message: `"Бир кунда" (${values.sourceDailyQty}) does not match the calculated delta (${calculatedDelta.toFixed(
+            2
+          )}) for "${row.farmer}" (${series}).`,
+          context: { farmer: row.farmer, series, sourceDaily: values.sourceDailyQty, calculatedDelta }
+        });
+      }
+
+      upsertMetric.run(
+        reportId,
+        farmerId,
+        series,
+        planQty,
+        values.sourceDailyQty ?? null,
+        cumulativeQty,
+        calculatedDelta,
+        completionPct
+      );
+    }
+  }
+}
+
+export type ReprocessOutcome =
+  | { status: "success" | "partial"; reportId: number; warnings: ImportWarning[]; farmerCount: number }
+  | { status: "failed"; warnings: ImportWarning[] };
+
+/**
+ * Re-runs the current parser against a report's already-stored original
+ * file and overwrites its farmer_metrics/warnings in place — for when a
+ * parser fix needs to correct a report that was imported before the fix
+ * shipped. Unlike importExcelReport(), this intentionally bypasses the
+ * source_hash duplicate check (the whole point is reprocessing identical
+ * bytes) and never touches is_active or report identity.
+ */
+export async function reprocessReport(reportId: number, actor: ImportActor): Promise<ReprocessOutcome> {
+  const db = getDb();
+  const report = db.prepare("SELECT * FROM reports WHERE id = ?").get(reportId) as
+    | { id: number; report_date: string; source_filename: string; raw_file_path: string | null }
+    | undefined;
+
+  if (!report) {
+    return { status: "failed", warnings: [{ severity: "ERROR", code: "REPORT_NOT_FOUND", message: `Report #${reportId} not found.` }] };
+  }
+  if (!report.raw_file_path) {
+    return {
+      status: "failed",
+      warnings: [
+        {
+          severity: "ERROR",
+          code: "RAW_FILE_MISSING",
+          message: `Report #${reportId} has no stored original file to reprocess from.`
+        }
+      ]
+    };
+  }
+
+  const buffer = readFileSync(path.join(dataDir(), report.raw_file_path));
+  const parsed = await parseWorkbook(buffer, report.source_filename, new Date(report.report_date));
+  const warnings = [...parsed.warnings];
+
+  if (parsed.rows.length === 0) {
+    return { status: "failed", warnings };
+  }
+
+  validateRows(parsed.rows, warnings);
+
+  db.exec("BEGIN");
+  try {
+    db.prepare("DELETE FROM farmer_metrics WHERE report_id = ?").run(reportId);
+    db.prepare("DELETE FROM import_warnings WHERE report_id = ?").run(reportId);
+
+    writeFarmerMetrics(db, reportId, report.report_date, parsed.rows, warnings);
+    checkTotalsConsistency(reportId, warnings);
+
+    const finalErrorCount = warnings.filter((w) => w.severity === "ERROR").length;
+    const status: "success" | "partial" = finalErrorCount > 0 ? "partial" : "success";
+
+    db.prepare(
+      "UPDATE reports SET parser_version = ?, warning_count = ?, error_count = ?, status = ? WHERE id = ?"
+    ).run(PARSER_VERSION, warnings.length, finalErrorCount, status, reportId);
+
+    const insertWarning = db.prepare(
+      "INSERT INTO import_warnings (report_id, severity, code, message, context) VALUES (?, ?, ?, ?, ?)"
+    );
+    for (const w of warnings.slice(0, 500)) {
+      insertWarning.run(reportId, w.severity, w.code, w.message, w.context ? JSON.stringify(w.context) : null);
+    }
+
+    db.exec("COMMIT");
+
+    logAudit("REPROCESSED", actor, {
+      reportId,
+      parserVersion: PARSER_VERSION,
+      rows: parsed.rows.length,
+      warnings: warnings.length,
+      errors: finalErrorCount,
+      status
+    });
+
+    return { status, reportId, warnings, farmerCount: parsed.rows.length };
   } catch (err) {
     db.exec("ROLLBACK");
     throw err;
