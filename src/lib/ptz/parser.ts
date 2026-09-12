@@ -6,6 +6,10 @@ import type { ColumnMapping, ImportWarning, ParsedFarmerRow, ParsedReport, Serie
 
 const IDENTIFIER_ROWNUM_RE = /^(№|n\s*\/\s*p|t\s*\/\s*r|#)$/i;
 const IDENTIFIER_FARMER_RE = /(фермер|хужалик|хужалик|хозяйств|farmer)/i;
+// Matches a region/grand-total subtotal line by its own label, independent
+// of the row-number column (some source files repeat the previous row's
+// number here instead of leaving it blank).
+const SUBTOTAL_TEXT_RE = /^(ҳудуд\s*жами|туман\s*жами|жами\s*:?|итого\s*:?|всего\s*:?|свод\s*:?|хаммаси\s*:?)$/i;
 
 type Merge = { c1: number; r1: number; c2: number; r2: number };
 
@@ -59,6 +63,29 @@ function resolveText(sheet: Worksheet, merges: Merge[], row: number, col: number
   const merge = findMerge(merges, row, col);
   if (merge) return cellText(sheet.getRow(merge.r1).getCell(merge.c1));
   return cellText(sheet.getRow(row).getCell(col));
+}
+
+// A real column header rarely merges across more than a handful of columns;
+// a report title/subtitle banner (e.g. one full sentence merged A2:Z2 above
+// the real header block) merges across nearly the whole sheet. Treating a
+// wide merge's text as blank keeps such banners out of the per-column header
+// path and out of the farmer/row-number column search, so a coincidental
+// keyword match inside a title sentence can't hijack column detection.
+const MAX_HEADER_MERGE_WIDTH = 10;
+
+// A stray "report date" banner (e.g. "11.09.2026 й") sometimes sits inside
+// the header row range, merged across just 1-2 columns that also belong to
+// a real zone (e.g. a "Жами" group) — too narrow for the width guard above
+// to catch. A literal date is never a legitimate zone/plan/daily/cumulative
+// label, so it's filtered out the same way.
+const DATE_LIKE_RE = /\d{1,2}[.,\-]\d{1,2}[.,\-]\d{2,4}/;
+
+function resolveHeaderText(sheet: Worksheet, merges: Merge[], row: number, col: number): string {
+  const merge = findMerge(merges, row, col);
+  if (merge && merge.c2 - merge.c1 + 1 > MAX_HEADER_MERGE_WIDTH) return "";
+  const text = resolveText(sheet, merges, row, col);
+  if (DATE_LIKE_RE.test(text)) return "";
+  return text;
 }
 
 type NumericReadResult = { value: number | null; error?: string };
@@ -123,7 +150,7 @@ function findIdentifierColumns(
   const colCount = sheet.columnCount || 30;
   for (let r = 1; r <= Math.min(scanRows, sheet.rowCount); r++) {
     for (let c = 1; c <= colCount; c++) {
-      const text = resolveText(sheet, merges, r, c);
+      const text = resolveHeaderText(sheet, merges, r, c);
       if (!text) continue;
       if (farmerCol === null && IDENTIFIER_FARMER_RE.test(text)) {
         farmerCol = c;
@@ -211,7 +238,7 @@ export async function parseWorkbook(
     const segments: string[] = [];
     let last = "";
     for (const r of headerRows) {
-      const text = resolveText(sheet, merges, r, c);
+      const text = resolveHeaderText(sheet, merges, r, c);
       if (text && text !== last) {
         segments.push(text);
         last = text;
@@ -270,6 +297,20 @@ export async function parseWorkbook(
     }
 
     if (!farmerText && !hasAnyMetric) continue; // blank row
+
+    if (farmerText && SUBTOTAL_TEXT_RE.test(farmerText.trim())) {
+      // Subtotal/grand-total line identified by its own label (e.g. "Ҳудуд
+      // жами", "Жами:"). Checked before the row-number heuristic below
+      // because some source files repeat the previous farmer's row number
+      // on this line instead of leaving it blank.
+      warnings.push({
+        severity: "INFO",
+        code: "SUBTOTAL_ROW_SKIPPED",
+        message: `Row ${r} ("${farmerText}") looks like a subtotal and was not counted as a farmer.`,
+        context: { row: r }
+      });
+      continue;
+    }
 
     if (farmerText && rowNumValue == null && !hasAnyMetric) {
       // Region separator row: a label with no row number and no figures.

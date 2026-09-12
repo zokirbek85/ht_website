@@ -19,7 +19,7 @@ function normalize(text: string): string {
 }
 
 const ZONE_KEYWORDS: Array<{ series: ZoneMatch; patterns: string[] }> = [
-  { series: "FUTURES", patterns: ["фьючерс", "future"] },
+  { series: "FUTURES", patterns: ["фьючерс", "фючерс", "future"] },
   { series: "FORWARD", patterns: ["форвард", "forward"] },
   { series: "TEMPORARY_STORAGE", patterns: ["вактинча сакла", "временн", "врем сохран", "temporary storage"] },
   { series: "DELIVERED", patterns: ["топшир", "сдано", "delivered"] },

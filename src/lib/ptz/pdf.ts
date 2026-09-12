@@ -91,7 +91,7 @@ export function generatePdfReport(input: PdfInput): Promise<Buffer> {
     doc.registerFont("bold", FONT_BOLD);
     doc.font("regular");
 
-    const pages: { title: string; render: () => void }[] = [
+    const sections: { title: string; render: () => void }[] = [
       { title: "ИЖРОЧИ ХУЛОСА", render: () => renderExecutiveSummary(doc, input) },
       { title: "ШАРТНОМА ТУРЛАРИ", render: () => renderContractTypes(doc, input) },
       { title: "ҲУДУДЛАР ТАҲЛИЛИ", render: () => renderRegions(doc, input) },
@@ -99,12 +99,30 @@ export function generatePdfReport(input: PdfInput): Promise<Buffer> {
       { title: "ПРОГНОЗ ВА РИСКЛАР", render: () => renderForecastAndRisks(doc, input) }
     ];
 
-    pages.forEach((page, i) => {
+    // A long ranking table (real reports can have 100+ farmers) can overflow
+    // onto extra physical pages that table()'s own pagination adds — those
+    // pages didn't go through the sections loop below, so without this
+    // listener they'd render with no navy header band at all. Registering
+    // it once means every page PDFKit ever creates, from any call site,
+    // automatically gets the current section's header.
+    let currentSectionTitle = sections[0]?.title ?? "";
+    doc.on("pageAdded", () => pageHeader(doc, input, currentSectionTitle));
+    pageHeader(doc, input, currentSectionTitle); // the first page predates the listener above
+
+    sections.forEach((section, i) => {
+      currentSectionTitle = section.title;
       if (i > 0) doc.addPage();
-      pageHeader(doc, input, page.title);
-      page.render();
-      footer(doc);
+      section.render();
     });
+
+    // Footers are drawn in a final retroactive pass (bufferPages lets us
+    // seek back to any page already produced) so every physical page gets
+    // one, including pages a table's internal overflow added mid-section.
+    const range = doc.bufferedPageRange();
+    for (let i = range.start; i < range.start + range.count; i++) {
+      doc.switchToPage(i);
+      footer(doc);
+    }
 
     doc.end();
   });
@@ -296,8 +314,8 @@ function table(doc: PDFKit.PDFDocument, headers: string[], rows: string[][], col
 
   rows.forEach((row, idx) => {
     if (y > doc.page.height - PAGE_MARGIN - 34 - rowHeight) {
-      doc.addPage();
-      y = PAGE_MARGIN + 10;
+      doc.addPage(); // the "pageAdded" listener draws the navy header band
+      y = CONTENT_TOP;
       drawHeader();
       doc.font("regular").fontSize(8.5);
     }
