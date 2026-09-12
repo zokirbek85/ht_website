@@ -33,6 +33,39 @@ Then restart the service:
 sudo systemctl restart hazorasp-textil
 ```
 
+## PTZ Analytics setup (Telegram bot + dashboard)
+
+See `docs/ptz-architecture.md` for the full design. Quick setup:
+
+1. **Check the VPS Node version first**: `node -v` must be **22.5 or newer** (24+ recommended) — the module
+   uses the built-in `node:sqlite`, which doesn't exist on older Node. Upgrade Node on the VPS before
+   deploying this feature if it's older.
+2. Create a **separate** Telegram bot via [@BotFather](https://t.me/BotFather) — do not reuse the existing
+   contact-form bot/token.
+3. Add to `/var/www/hazorasp-textil/.env.local`:
+
+   ```dotenv
+   PTZ_BOT_TOKEN=your-new-bot-token
+   PTZ_BOT_WEBHOOK_SECRET=generate-a-long-random-secret
+   PTZ_ADMIN_TELEGRAM_IDS=123456789
+   ```
+
+   (`PTZ_ADMIN_TELEGRAM_IDS` bootstraps the first admin — get a numeric Telegram ID by having that person
+   message [@userinfobot](https://t.me/userinfobot). Additional users can be added later at `/admin/ptz`.)
+4. Restart the service, then register the webhook once (from the VPS, so it reads the same `.env.local`):
+
+   ```bash
+   sudo systemctl restart hazorasp-textil
+   cd /var/www/hazorasp-textil
+   set -a; source .env.local; set +a
+   npm run ptz:set-webhook
+   ```
+5. Message the bot with `/start`, then send it an `.xlsx` report to test.
+
+The SQLite database, uploaded Excel files and generated PDFs live under `data/ptz/` — untracked by git
+(see `.gitignore`) so `git reset --hard` on every deploy never touches them, but **make sure your VPS
+backup job includes `/var/www/hazorasp-textil/data/ptz/`** — it is the only copy of the import history.
+
 ## GitHub Actions SSH access
 
 Create a dedicated Ed25519 key locally without a passphrase for the deploy automation:

@@ -6,3 +6,8 @@ build
 .env*.local
 .DS_Store
 next-env.d.ts
+
+# PTZ Analytics runtime data (SQLite DB, uploaded Excel files, generated PDFs).
+# Must stay untracked so `git reset --hard` on deploy never wipes it.
+data/ptz/*
+!data/ptz/.gitkeep
