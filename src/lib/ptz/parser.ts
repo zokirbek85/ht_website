@@ -10,6 +10,10 @@ const IDENTIFIER_FARMER_RE = /(фермер|хужалик|хужалик|хоз
 // of the row-number column (some source files repeat the previous row's
 // number here instead of leaving it blank).
 const SUBTOTAL_TEXT_RE = /^(ҳудуд\s*жами|туман\s*жами|жами\s*:?|итого\s*:?|всего\s*:?|свод\s*:?|хаммаси\s*:?)$/i;
+// The single sheet-wide grand-total line, as opposed to a per-region
+// subtotal ("Ҳудуд жами" repeats once per region) — used as an independent
+// cross-check against the sum of the parsed farmer rows.
+const GRAND_TOTAL_TEXT_RE = /^(хаммаси|умумий\s*жами)\s*:?$/i;
 
 type Merge = { c1: number; r1: number; c2: number; r2: number };
 
@@ -192,7 +196,8 @@ export async function parseWorkbook(
       sheetName: sheet.name,
       rows: [],
       warnings,
-      columnMap: []
+      columnMap: [],
+      grandTotalFromSheet: null
     };
   }
 
@@ -278,7 +283,37 @@ export async function parseWorkbook(
     });
   }
 
+  function extractRowMetrics(r: number, label: string): Partial<Record<Series, SeriesValues>> {
+    const metrics: Partial<Record<Series, SeriesValues>> = {};
+    for (const [series, fields] of seriesFieldMap.entries()) {
+      const values: SeriesValues = {};
+      if (fields.PLAN != null) {
+        const res = readNumeric(sheet, merges, r, fields.PLAN);
+        values.planQty = res.value;
+        if (res.error) warnings.push(formulaErrorWarning(r, fields.PLAN, res.error, label, series, "PLAN"));
+      }
+      if (fields.DAILY != null) {
+        const res = readNumeric(sheet, merges, r, fields.DAILY);
+        values.sourceDailyQty = res.value;
+        if (res.error) warnings.push(formulaErrorWarning(r, fields.DAILY, res.error, label, series, "DAILY"));
+      }
+      if (fields.CUMULATIVE != null) {
+        const res = readNumeric(sheet, merges, r, fields.CUMULATIVE);
+        values.sourceCumulativeQty = res.value;
+        if (res.error) warnings.push(formulaErrorWarning(r, fields.CUMULATIVE, res.error, label, series, "CUMULATIVE"));
+      }
+      if (fields.PCT != null) {
+        const res = readNumeric(sheet, merges, r, fields.PCT);
+        values.completionPct = res.value;
+        if (res.error) warnings.push(formulaErrorWarning(r, fields.PCT, res.error, label, series, "PCT"));
+      }
+      metrics[series] = values;
+    }
+    return metrics;
+  }
+
   const rows: ParsedFarmerRow[] = [];
+  let grandTotalFromSheet: Partial<Record<Series, SeriesValues>> | null = null;
   let currentRegion: string | null = null;
   const seenFarmerKeys = new Set<string>();
 
@@ -303,6 +338,16 @@ export async function parseWorkbook(
       // жами", "Жами:"). Checked before the row-number heuristic below
       // because some source files repeat the previous farmer's row number
       // on this line instead of leaving it blank.
+      if (GRAND_TOTAL_TEXT_RE.test(farmerText.trim()) && hasAnyMetric) {
+        // The sheet-wide grand total ("Хаммаси") — capture it (without the
+        // formula-error warnings a broken cell there would otherwise add;
+        // this is a cross-check value, not farmer data) so the importer can
+        // compare it against the actual sum of parsed farmers and flag it
+        // if the sheet's own total is stale.
+        const before = warnings.length;
+        grandTotalFromSheet = extractRowMetrics(r, farmerText);
+        warnings.length = before;
+      }
       warnings.push({
         severity: "INFO",
         code: "SUBTOTAL_ROW_SKIPPED",
@@ -342,38 +387,21 @@ export async function parseWorkbook(
     }
     seenFarmerKeys.add(key);
 
-    const metrics: Partial<Record<Series, SeriesValues>> = {};
-    for (const [series, fields] of seriesFieldMap.entries()) {
-      const values: SeriesValues = {};
-      if (fields.PLAN != null) {
-        const res = readNumeric(sheet, merges, r, fields.PLAN);
-        values.planQty = res.value;
-        if (res.error) warnings.push(formulaErrorWarning(r, fields.PLAN, res.error, farmerText, series, "PLAN"));
-      }
-      if (fields.DAILY != null) {
-        const res = readNumeric(sheet, merges, r, fields.DAILY);
-        values.sourceDailyQty = res.value;
-        if (res.error) warnings.push(formulaErrorWarning(r, fields.DAILY, res.error, farmerText, series, "DAILY"));
-      }
-      if (fields.CUMULATIVE != null) {
-        const res = readNumeric(sheet, merges, r, fields.CUMULATIVE);
-        values.sourceCumulativeQty = res.value;
-        if (res.error) warnings.push(formulaErrorWarning(r, fields.CUMULATIVE, res.error, farmerText, series, "CUMULATIVE"));
-      }
-      if (fields.PCT != null) {
-        const res = readNumeric(sheet, merges, r, fields.PCT);
-        values.completionPct = res.value;
-        if (res.error) warnings.push(formulaErrorWarning(r, fields.PCT, res.error, farmerText, series, "PCT"));
-      }
-      metrics[series] = values;
-    }
-
+    const metrics = extractRowMetrics(r, farmerText);
     rows.push({ region: currentRegion, farmer: farmerText, metrics });
   }
 
   const { reportDate, method } = detectReportDate(filename, sheet, uploadTimestamp);
 
-  return { reportDate, dateDetectionMethod: method, sheetName: sheet.name, rows, warnings, columnMap };
+  return {
+    reportDate,
+    dateDetectionMethod: method,
+    sheetName: sheet.name,
+    rows,
+    warnings,
+    columnMap,
+    grandTotalFromSheet
+  };
 }
 
 function formulaErrorWarning(

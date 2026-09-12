@@ -37,6 +37,11 @@ export type ParsedReport = {
   rows: ParsedFarmerRow[];
   warnings: ImportWarning[];
   columnMap: ColumnMapping[];
+  // The sheet's own grand-total row (e.g. "Хаммаси"), if one was found — used
+  // as an independent cross-check against the sum of the parsed farmer rows,
+  // since that row is often a pasted number that goes stale as rows are
+  // added later and nobody updates it.
+  grandTotalFromSheet: Partial<Record<Series, SeriesValues>> | null;
 };
 
 export type ColumnMapping = {

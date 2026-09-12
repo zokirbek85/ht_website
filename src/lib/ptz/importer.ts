@@ -4,7 +4,7 @@ import path from "node:path";
 import { dataDir, getDb, PARSER_VERSION, SCHEMA_VERSION } from "./db.ts";
 import { parseWorkbook } from "./parser.ts";
 import { logAudit } from "./audit.ts";
-import { SERIES, type ImportWarning, type ParsedFarmerRow, type Series } from "./types.ts";
+import { SERIES, type ImportWarning, type ParsedFarmerRow, type Series, type SeriesValues } from "./types.ts";
 import type { DatabaseSync } from "node:sqlite";
 
 export type ImportOutcome =
@@ -104,6 +104,7 @@ export async function importExcelReport(
 
     writeFarmerMetrics(db, reportId, parsed.reportDate, parsed.rows, warnings);
     checkTotalsConsistency(reportId, warnings);
+    checkGrandTotalConsistency(reportId, parsed.grandTotalFromSheet, warnings);
 
     const finalErrorCount = warnings.filter((w) => w.severity === "ERROR").length;
     db.prepare("UPDATE reports SET warning_count = ?, error_count = ? WHERE id = ?").run(
@@ -275,6 +276,7 @@ export async function reprocessReport(reportId: number, actor: ImportActor): Pro
 
     writeFarmerMetrics(db, reportId, report.report_date, parsed.rows, warnings);
     checkTotalsConsistency(reportId, warnings);
+    checkGrandTotalConsistency(reportId, parsed.grandTotalFromSheet, warnings);
 
     const finalErrorCount = warnings.filter((w) => w.severity === "ERROR").length;
     const status: "success" | "partial" = finalErrorCount > 0 ? "partial" : "success";
@@ -356,6 +358,53 @@ function checkTotalsConsistency(reportId: number, warnings: ImportWarning[]): vo
         )}) билан мос келмайди: "${farmer}".`,
         context: { farmer, sum, total: series.TOTAL, diff }
       });
+    }
+  }
+}
+
+/**
+ * Cross-checks the sum of every parsed farmer's TOTAL.planQty/cumulativeQty
+ * against the sheet's own grand-total row (e.g. "Хаммаси"), when one was
+ * found. That row is very often a number pasted once and never updated as
+ * more farmer rows get added to the sheet later — when it drifts from the
+ * real sum, that's worth surfacing rather than silently trusting whichever
+ * number happens to be on that one line.
+ */
+function checkGrandTotalConsistency(
+  reportId: number,
+  grandTotalFromSheet: Partial<Record<Series, SeriesValues>> | null,
+  warnings: ImportWarning[]
+): void {
+  if (!grandTotalFromSheet) return;
+  const db = getDb();
+
+  for (const series of SERIES) {
+    const sheetValues = grandTotalFromSheet[series];
+    if (!sheetValues) continue;
+
+    for (const [field, sheetValue] of Object.entries(sheetValues) as [keyof SeriesValues, number | null | undefined][]) {
+      if (sheetValue == null) continue;
+      const column = field === "planQty" ? "plan_qty" : field === "sourceCumulativeQty" ? "source_cumulative_qty" : null;
+      if (!column) continue; // only plan/cumulative are meaningful to sum and compare this way
+
+      const row = db
+        .prepare(`SELECT SUM(${column}) AS total FROM farmer_metrics WHERE report_id = ? AND series = ?`)
+        .get(reportId, series) as { total: number | null };
+      const computed = row.total ?? 0;
+      const diff = Math.abs(computed - sheetValue);
+
+      if (diff > Math.max(CONSISTENCY_ABS_THRESHOLD, CONSISTENCY_REL_THRESHOLD * Math.abs(sheetValue))) {
+        warnings.push({
+          severity: "WARNING",
+          code: "GRAND_TOTAL_MISMATCH",
+          message: `Файлнинг ўзидаги "Хаммаси" қатори (${sheetValue.toFixed(
+            2
+          )}) фермерлар йиғиндисидан (${computed.toFixed(
+            2
+          )}) фарқ қилади (${series}.${field}) — жадвалдаги умумий сатр эскирган бўлиши мумкин.`,
+          context: { series, field, sheetValue, computed, diff }
+        });
+      }
     }
   }
 }
