@@ -1,19 +1,9 @@
 import ExcelJS from "exceljs";
 import type { Worksheet, Cell } from "exceljs";
-import { classifyHeaderPath, type LeafType, type ZoneMatch } from "./excel-mapping.ts";
-import { detectReportDate } from "./dateDetect.ts";
-import type { ColumnMapping, ImportWarning, ParsedFarmerRow, ParsedReport, Series, SeriesValues } from "./types.ts";
-
-const IDENTIFIER_ROWNUM_RE = /^(№|n\s*\/\s*p|t\s*\/\s*r|#)$/i;
-const IDENTIFIER_FARMER_RE = /(фермер|хужалик|хужалик|хозяйств|farmer)/i;
-// Matches a region/grand-total subtotal line by its own label, independent
-// of the row-number column (some source files repeat the previous row's
-// number here instead of leaving it blank).
-const SUBTOTAL_TEXT_RE = /^(ҳудуд\s*жами|туман\s*жами|жами\s*:?|итого\s*:?|всего\s*:?|свод\s*:?|хаммаси\s*:?)$/i;
-// The single sheet-wide grand-total line, as opposed to a per-region
-// subtotal ("Ҳудуд жами" repeats once per region) — used as an independent
-// cross-check against the sum of the parsed farmer rows.
-const GRAND_TOTAL_TEXT_RE = /^(хаммаси|умумий\s*жами)\s*:?$/i;
+import { classifyColumn, FARMER_HEADER_RE, GRAND_TOTAL_TEXT_RE, IDENTIFIER_ROWNUM_RE } from "./excel-mapping.ts";
+import { normDate, normDateTime, normInn, normInt, normNumber, normText } from "./normalize.ts";
+import { getOperationIdentityKey } from "./identity.ts";
+import type { ColumnMapping, GrandTotalCheck, ImportWarning, ParsedOperationRow, ParsedReport } from "./types.ts";
 
 type Merge = { c1: number; r1: number; c2: number; r2: number };
 
@@ -46,21 +36,30 @@ function findMerge(merges: Merge[], row: number, col: number): Merge | null {
   return null;
 }
 
-function cellText(cell: Cell): string {
+function cellRaw(cell: Cell): unknown {
   const v = cell.value;
-  if (v == null) return "";
-  if (typeof v === "string") return v.trim();
-  if (typeof v === "number") return String(v);
-  if (v instanceof Date) return v.toISOString();
+  if (v == null) return null;
   if (typeof v === "object") {
     if ("richText" in v && Array.isArray((v as { richText: { text: string }[] }).richText)) {
-      return (v as { richText: { text: string }[] }).richText.map((r) => r.text).join("").trim();
+      return (v as { richText: { text: string }[] }).richText.map((r) => r.text).join("");
     }
-    if ("text" in v && typeof (v as { text: unknown }).text === "string") {
-      return (v as { text: string }).text.trim();
+    if ("result" in v) {
+      const result = (v as { result: unknown }).result;
+      if (result && typeof result === "object" && "error" in (result as Record<string, unknown>)) return null;
+      return result;
     }
+    if ("error" in v) return null;
+    if (v instanceof Date) return v;
+    if ("text" in v && typeof (v as { text: unknown }).text === "string") return (v as { text: string }).text;
   }
-  return "";
+  return v;
+}
+
+function cellText(cell: Cell): string {
+  const v = cellRaw(cell);
+  if (v == null) return "";
+  if (v instanceof Date) return v.toISOString();
+  return String(v).trim();
 }
 
 function resolveText(sheet: Worksheet, merges: Merge[], row: number, col: number): string {
@@ -69,75 +68,26 @@ function resolveText(sheet: Worksheet, merges: Merge[], row: number, col: number
   return cellText(sheet.getRow(row).getCell(col));
 }
 
-// A real column header rarely merges across more than a handful of columns;
-// a report title/subtitle banner (e.g. one full sentence merged A2:Z2 above
-// the real header block) merges across nearly the whole sheet. Treating a
-// wide merge's text as blank keeps such banners out of the per-column header
-// path and out of the farmer/row-number column search, so a coincidental
-// keyword match inside a title sentence can't hijack column detection.
-const MAX_HEADER_MERGE_WIDTH = 10;
+function resolveRaw(sheet: Worksheet, merges: Merge[], row: number, col: number): unknown {
+  const merge = findMerge(merges, row, col);
+  if (merge) return cellRaw(sheet.getRow(merge.r1).getCell(merge.c1));
+  return cellRaw(sheet.getRow(row).getCell(col));
+}
 
-// A stray "report date" banner (e.g. "11.09.2026 й") sometimes sits inside
-// the header row range, merged across just 1-2 columns that also belong to
-// a real zone (e.g. a "Жами" group) — too narrow for the width guard above
-// to catch. A literal date is never a legitimate zone/plan/daily/cumulative
-// label, so it's filtered out the same way.
-const DATE_LIKE_RE = /\d{1,2}[.,\-]\d{1,2}[.,\-]\d{2,4}/;
+// A real column header rarely merges across more than a handful of columns;
+// the report title/"МАЪЛУМОТ" banners merge across the whole sheet width.
+// Treating such a wide merge's text as blank keeps it out of both the
+// identifier-column search and the per-column header path.
+const MAX_HEADER_MERGE_WIDTH = 10;
 
 function resolveHeaderText(sheet: Worksheet, merges: Merge[], row: number, col: number): string {
   const merge = findMerge(merges, row, col);
   if (merge && merge.c2 - merge.c1 + 1 > MAX_HEADER_MERGE_WIDTH) return "";
-  const text = resolveText(sheet, merges, row, col);
-  if (DATE_LIKE_RE.test(text)) return "";
-  return text;
+  return resolveText(sheet, merges, row, col);
 }
-
-type NumericReadResult = { value: number | null; error?: string };
-
-function readNumeric(sheet: Worksheet, merges: Merge[], row: number, col: number): NumericReadResult {
-  const merge = findMerge(merges, row, col);
-  const cell = merge ? sheet.getRow(merge.r1).getCell(merge.c1) : sheet.getRow(row).getCell(col);
-  const v = cell.value;
-  if (v == null || v === "") return { value: null };
-  if (typeof v === "number") return { value: v };
-
-  if (typeof v === "object") {
-    if ("error" in v && typeof (v as { error: string }).error === "string") {
-      return { value: null, error: (v as { error: string }).error };
-    }
-    if ("result" in v) {
-      const result = (v as { result: unknown }).result;
-      if (typeof result === "number") return { value: result };
-      if (result && typeof result === "object" && "error" in (result as Record<string, unknown>)) {
-        return { value: null, error: String((result as { error: unknown }).error) };
-      }
-      if (typeof result === "string") {
-        const n = parseFloat(result.replace(/\s/g, "").replace(",", "."));
-        return Number.isFinite(n) ? { value: n } : { value: null };
-      }
-      return { value: null };
-    }
-  }
-
-  if (typeof v === "string") {
-    const trimmed = v.trim();
-    if (!trimmed) return { value: null };
-    const n = parseFloat(trimmed.replace(/\s/g, "").replace(",", "."));
-    return Number.isFinite(n) ? { value: n } : { value: null, error: "UNPARSEABLE" };
-  }
-
-  return { value: null };
-}
-
-type ColumnRole =
-  | { kind: "ROW_NUM" }
-  | { kind: "FARMER_NAME" }
-  | { kind: "METRIC"; series: Series; leaf: NonNullable<LeafType> }
-  | { kind: "UNMAPPED" };
 
 function pickSheet(workbook: ExcelJS.Workbook): Worksheet {
-  const byName = workbook.worksheets.find((ws) => /факт|fact/i.test(ws.name));
-  const sheet = byName ?? workbook.worksheets[0];
+  const sheet = workbook.worksheets[0];
   if (!sheet) throw new Error("The workbook contains no worksheets.");
   return sheet;
 }
@@ -151,12 +101,12 @@ function findIdentifierColumns(
   let farmerHeaderBottomRow: number | null = null;
   let rowNumCol: number | null = null;
 
-  const colCount = sheet.columnCount || 30;
+  const colCount = sheet.columnCount || 50;
   for (let r = 1; r <= Math.min(scanRows, sheet.rowCount); r++) {
     for (let c = 1; c <= colCount; c++) {
       const text = resolveHeaderText(sheet, merges, r, c);
       if (!text) continue;
-      if (farmerCol === null && IDENTIFIER_FARMER_RE.test(text)) {
+      if (farmerCol === null && FARMER_HEADER_RE.test(text)) {
         farmerCol = c;
         const merge = findMerge(merges, r, c);
         farmerHeaderBottomRow = merge ? merge.r2 : r;
@@ -169,11 +119,32 @@ function findIdentifierColumns(
   return { farmerCol, farmerHeaderBottomRow, rowNumCol };
 }
 
-export async function parseWorkbook(
-  buffer: Buffer,
-  filename: string,
-  uploadTimestamp: Date
-): Promise<ParsedReport> {
+const ENGLISH_MONTHS: Record<string, number> = {
+  january: 1, february: 2, march: 3, april: 4, may: 5, june: 6,
+  july: 7, august: 8, september: 9, october: 10, november: 11, december: 12
+};
+
+/**
+ * The report title banner (e.g. "... бўйича 15 September 08:45 кунига
+ * саватда ...") carries a generation timestamp but no year. The acceptance
+ * dates in the data rows always carry a full year, so that's used to
+ * disambiguate — see docs/ptz-architecture.md.
+ */
+function detectReportGeneratedAt(
+  bannerText: string,
+  fallbackYear: number
+): { iso: string | null; method: "title_banner" } {
+  const m = /(\d{1,2})\s+([A-Za-z]+)\s+(\d{1,2}):(\d{2})/.exec(bannerText);
+  if (!m) return { iso: null, method: "title_banner" };
+  const [, dayStr, monthName, hh, mm] = m;
+  const month = ENGLISH_MONTHS[(monthName ?? "").toLowerCase()];
+  if (!month || !dayStr) return { iso: null, method: "title_banner" };
+  const day = dayStr.padStart(2, "0");
+  const monthStr = String(month).padStart(2, "0");
+  return { iso: `${fallbackYear}-${monthStr}-${day}T${hh}:${mm}:00`, method: "title_banner" };
+}
+
+export async function parseWorkbook(buffer: Buffer, _filename: string, uploadTimestamp: Date): Promise<ParsedReport> {
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer);
 
@@ -184,38 +155,39 @@ export async function parseWorkbook(
   const HEADER_SCAN_ROWS = 15;
   const { farmerCol, farmerHeaderBottomRow, rowNumCol } = findIdentifierColumns(sheet, merges, HEADER_SCAN_ROWS);
 
+  const emptyResult = (): ParsedReport => ({
+    reportGeneratedAt: null,
+    dateDetectionMethod: "upload_time",
+    dataPeriodStart: null,
+    dataPeriodEnd: null,
+    sheetName: sheet.name,
+    rows: [],
+    warnings,
+    columnMap: [],
+    grandTotalFromSheet: null
+  });
+
   if (farmerCol === null) {
     warnings.push({
       severity: "ERROR",
       code: "FARMER_COLUMN_NOT_FOUND",
-      message: "Could not locate the farmer name column in the header. Parsing aborted."
+      message: "Could not locate the farmer name column (Хўжалик номи) in the header. Parsing aborted."
     });
-    return {
-      reportDate: detectReportDate(filename, sheet, uploadTimestamp).reportDate,
-      dateDetectionMethod: detectReportDate(filename, sheet, uploadTimestamp).method,
-      sheetName: sheet.name,
-      rows: [],
-      warnings,
-      columnMap: [],
-      grandTotalFromSheet: null
-    };
+    return emptyResult();
   }
 
-  // Fallback for the header/data boundary when the farmer-name header isn't
-  // vertically merged across the whole header block: first row where the
-  // row-number column holds the value 1.
   let dataStartRow = farmerHeaderBottomRow ? farmerHeaderBottomRow + 1 : null;
   if (!dataStartRow && rowNumCol !== null) {
     for (let r = 1; r <= Math.min(HEADER_SCAN_ROWS, sheet.rowCount); r++) {
-      const { value } = readNumeric(sheet, merges, r, rowNumCol);
-      if (value === 1) {
+      const raw = resolveRaw(sheet, merges, r, rowNumCol);
+      if (normInt(raw) === 1) {
         dataStartRow = r;
         break;
       }
     }
   }
   if (!dataStartRow) {
-    dataStartRow = 6; // last-resort guess; the sample structure has ~4-5 header rows
+    dataStartRow = 7; // last-resort guess matching the known real-file layout (2-row header)
     warnings.push({
       severity: "WARNING",
       code: "HEADER_BOUNDARY_GUESSED",
@@ -224,21 +196,18 @@ export async function parseWorkbook(
   }
 
   const headerRows = Array.from({ length: dataStartRow - 1 }, (_, i) => i + 1);
-  const colCount = sheet.columnCount || 30;
+  const colCount = sheet.columnCount || 50;
 
   const columnMap: ColumnMapping[] = [];
-  const roles = new Map<number, ColumnRole>();
-  const seriesFieldMap = new Map<Series, Partial<Record<NonNullable<LeafType>, number>>>();
+  const fieldByColumn = new Map<number, { field: string; type: string }>();
+  const zoneOccurrenceIndex = new Map<string, number>();
 
   for (let c = 1; c <= colCount; c++) {
     if (c === farmerCol) {
-      roles.set(c, { kind: "FARMER_NAME" });
+      fieldByColumn.set(c, { field: "farmerName", type: "text" });
       continue;
     }
-    if (rowNumCol !== null && c === rowNumCol) {
-      roles.set(c, { kind: "ROW_NUM" });
-      continue;
-    }
+    if (rowNumCol !== null && c === rowNumCol) continue; // row number itself isn't a business field
 
     const segments: string[] = [];
     let last = "";
@@ -249,153 +218,201 @@ export async function parseWorkbook(
         last = text;
       }
     }
-    if (segments.length === 0) {
-      roles.set(c, { kind: "UNMAPPED" });
-      continue;
-    }
+    if (segments.length === 0) continue;
 
-    const { zone, leaf, confidence } = classifyHeaderPath(segments);
-    columnMap.push({ columnIndex: c, headerPath: segments.join(" > "), canonicalField: zone && leaf ? `${zone}.${leaf}` : null, confidence });
+    const result = classifyColumn(segments, zoneOccurrenceIndex);
+    columnMap.push({
+      columnIndex: c,
+      headerPath: segments.join(" > "),
+      canonicalField: result?.field ?? null,
+      confidence: result?.confidence ?? 0
+    });
 
-    if (zone && zone !== "IDENTIFIER" && leaf) {
-      roles.set(c, { kind: "METRIC", series: zone, leaf });
-      const existing = seriesFieldMap.get(zone) ?? {};
-      existing[leaf] = c;
-      seriesFieldMap.set(zone, existing);
+    if (result) {
+      fieldByColumn.set(c, result);
     } else {
-      roles.set(c, { kind: "UNMAPPED" });
-      if (confidence < 0.5) {
-        warnings.push({
-          severity: "INFO",
-          code: "COLUMN_NOT_MAPPED",
-          message: `Column ${c} ("${segments.join(" > ")}") could not be mapped to a known business field and was ignored.`,
-          context: { columnIndex: c, headerPath: segments.join(" > "), confidence }
-        });
-      }
+      warnings.push({
+        severity: "INFO",
+        code: "COLUMN_NOT_MAPPED",
+        message: `Column ${c} ("${segments.join(" > ")}") could not be mapped to a known business field and was ignored.`,
+        context: { columnIndex: c, headerPath: segments.join(" > ") }
+      });
     }
   }
 
-  if (seriesFieldMap.size === 0) {
+  const fieldColumn = new Map<string, number>();
+  for (const [col, { field }] of fieldByColumn.entries()) fieldColumn.set(field, col);
+
+  function raw(field: string, r: number): unknown {
+    const col = fieldColumn.get(field);
+    if (col == null) return null;
+    return resolveRaw(sheet, merges, r, col);
+  }
+
+  const rows: ParsedOperationRow[] = [];
+  let grandTotalFromSheet: GrandTotalCheck | null = null;
+  const seenIdentityKeys = new Map<string, number>();
+  let minDate: string | null = null;
+  let maxDate: string | null = null;
+
+  for (let r = dataStartRow; r <= sheet.rowCount; r++) {
+    const farmerText = normText(raw("farmerName", r));
+    const rowNumRaw = rowNumCol !== null ? resolveRaw(sheet, merges, r, rowNumCol) : null;
+    const rowNumValue = normInt(rowNumRaw);
+    // The sheet's own grand-total row puts its "ЖАМИ:" label in the row-number
+    // column (verified against the real export), not the farmer-name column —
+    // farmerText is null on that row, so both are checked as possible labels.
+    const rowLabelText = normText(rowNumRaw);
+
+    const physicalKg = normNumber(raw("physicalKg", r));
+    const conditionedKg = normNumber(raw("conditionedKg", r));
+    const hasAnyMetric = physicalKg != null || conditionedKg != null;
+
+    if (!farmerText && !hasAnyMetric) continue; // blank spacer row
+
+    const grandTotalLabel = [farmerText, rowLabelText].find((t) => t && GRAND_TOTAL_TEXT_RE.test(t));
+    if (grandTotalLabel && rowNumValue == null) {
+      if (hasAnyMetric) {
+        grandTotalFromSheet = {
+          ...(physicalKg != null ? { physicalKg } : {}),
+          ...(conditionedKg != null ? { conditionedKg } : {}),
+          ...(normNumber(raw("amount", r)) != null ? { amount: normNumber(raw("amount", r))! } : {})
+        };
+      }
+      warnings.push({
+        severity: "INFO",
+        code: "GRAND_TOTAL_ROW_SKIPPED",
+        message: `Row ${r} ("${grandTotalLabel}") is the sheet's own grand-total line and was not counted as an operation.`,
+        context: { row: r }
+      });
+      continue;
+    }
+
+    if (!farmerText) {
+      warnings.push({
+        severity: "WARNING",
+        code: "MISSING_FARMER_NAME",
+        message: `Row ${r} has data but no farmer name and was skipped.`,
+        context: { row: r }
+      });
+      continue;
+    }
+
+    const acceptanceDate = normDate(raw("acceptanceDate", r));
+    if (acceptanceDate) {
+      if (!minDate || acceptanceDate < minDate) minDate = acceptanceDate;
+      if (!maxDate || acceptanceDate > maxDate) maxDate = acceptanceDate;
+    }
+
+    const partial: Omit<ParsedOperationRow, "identityKey"> = {
+      rowNumber: r,
+      farmerName: farmerText,
+      farmerInn: normInn(raw("farmerInn", r)),
+      farmerRegion: normText(raw("farmerRegion", r)),
+      farmerDistrict: normText(raw("farmerDistrict", r)),
+
+      contractType: normText(raw("contractType", r)),
+      contractNumber: normText(raw("contractNumber", r)),
+      contractQty: normNumber(raw("contractQty", r)),
+
+      acceptanceDate,
+      acceptanceRecordNo: normText(raw("acceptanceRecordNo", r)),
+
+      pk17Number: normText(raw("pk17Number", r)),
+      pk17RegisteredAt: normDateTime(raw("pk17RegisteredAt", r)),
+      pk17SignedAt: normDateTime(raw("pk17SignedAt", r)),
+
+      batchNo: normText(raw("batchNo", r)),
+      plotType: normText(raw("plotType", r)),
+      plotNo: normText(raw("plotNo", r)),
+
+      varietyDeclared: normText(raw("varietyDeclared", r)),
+      generationDeclared: normText(raw("generationDeclared", r)),
+      industrialGradeDeclared: normText(raw("industrialGradeDeclared", r)),
+      classDeclared: normText(raw("classDeclared", r)),
+
+      pickingMethod: normText(raw("pickingMethod", r)),
+
+      lab2hlNumber: normText(raw("lab2hlNumber", r)),
+      industrialGradeLab: normText(raw("industrialGradeLab", r)),
+      classLab: normText(raw("classLab", r)),
+
+      grossKg: normNumber(raw("grossKg", r)),
+      tareKg: normNumber(raw("tareKg", r)),
+      physicalKg,
+      impurityPct: normNumber(raw("impurityPct", r)),
+      calculatedKg: normNumber(raw("calculatedKg", r)),
+      moisturePct: normNumber(raw("moisturePct", r)),
+      conditionedKg,
+
+      markup: normNumber(raw("markup", r)),
+      discount: normNumber(raw("discount", r)),
+      unitPrice: normNumber(raw("unitPrice", r)),
+      amount: normNumber(raw("amount", r)),
+      transportFee: normNumber(raw("transportFee", r)),
+      seedCottonFee: normNumber(raw("seedCottonFee", r)),
+      otherFeeTotal: normNumber(raw("otherFeeTotal", r)),
+
+      buyerName: normText(raw("buyerName", r)),
+      buyerInn: normInn(raw("buyerInn", r)),
+
+      preparationPointName: normText(raw("preparationPointName", r)),
+      preparationDistrict: normText(raw("preparationDistrict", r)),
+      preparationRegion: normText(raw("preparationRegion", r)),
+
+      vehicleType: normText(raw("vehicleType", r)),
+      vehiclePlate: normText(raw("vehiclePlate", r)),
+      trailerCount: normInt(raw("trailerCount", r)),
+      trailerPlate: normText(raw("trailerPlate", r)),
+
+      clusterName: normText(raw("clusterName", r))
+    };
+
+    const identityKey = getOperationIdentityKey(partial);
+    const priorRow = seenIdentityKeys.get(identityKey);
+    if (priorRow != null) {
+      warnings.push({
+        severity: "WARNING",
+        code: "DUPLICATE_OPERATION",
+        message: `Row ${r} looks like a duplicate of row ${priorRow} (same identity key: ${identityKey}).`,
+        context: { row: r, duplicateOfRow: priorRow, identityKey }
+      });
+    } else {
+      seenIdentityKeys.set(identityKey, r);
+    }
+
+    rows.push({ ...partial, identityKey });
+  }
+
+  const bannerText = resolveText(sheet, merges, 1, 1) || resolveText(sheet, merges, 1, 2);
+  const fallbackYear = maxDate ? Number(maxDate.slice(0, 4)) : uploadTimestamp.getUTCFullYear();
+  const bannerResult = detectReportGeneratedAt(bannerText, fallbackYear);
+
+  let reportGeneratedAt = bannerResult.iso;
+  let dateDetectionMethod: ParsedReport["dateDetectionMethod"] = "title_banner";
+  if (!reportGeneratedAt) {
+    if (maxDate) {
+      reportGeneratedAt = `${maxDate}T00:00:00`;
+      dateDetectionMethod = "max_acceptance_date";
+    } else {
+      reportGeneratedAt = uploadTimestamp.toISOString();
+      dateDetectionMethod = "upload_time";
+    }
+  }
+
+  if (rows.length === 0) {
     warnings.push({
       severity: "ERROR",
-      code: "NO_METRIC_COLUMNS_MAPPED",
-      message: "No Futures/Forward/Temporary-Storage/Total metric columns could be mapped."
+      code: "NO_ROWS_PARSED",
+      message: "No acceptance operation rows could be parsed from this file."
     });
   }
 
-  function extractRowMetrics(r: number, label: string): Partial<Record<Series, SeriesValues>> {
-    const metrics: Partial<Record<Series, SeriesValues>> = {};
-    for (const [series, fields] of seriesFieldMap.entries()) {
-      const values: SeriesValues = {};
-      if (fields.PLAN != null) {
-        const res = readNumeric(sheet, merges, r, fields.PLAN);
-        values.planQty = res.value;
-        if (res.error) warnings.push(formulaErrorWarning(r, fields.PLAN, res.error, label, series, "PLAN"));
-      }
-      if (fields.DAILY != null) {
-        const res = readNumeric(sheet, merges, r, fields.DAILY);
-        values.sourceDailyQty = res.value;
-        if (res.error) warnings.push(formulaErrorWarning(r, fields.DAILY, res.error, label, series, "DAILY"));
-      }
-      if (fields.CUMULATIVE != null) {
-        const res = readNumeric(sheet, merges, r, fields.CUMULATIVE);
-        values.sourceCumulativeQty = res.value;
-        if (res.error) warnings.push(formulaErrorWarning(r, fields.CUMULATIVE, res.error, label, series, "CUMULATIVE"));
-      }
-      if (fields.PCT != null) {
-        const res = readNumeric(sheet, merges, r, fields.PCT);
-        values.completionPct = res.value;
-        if (res.error) warnings.push(formulaErrorWarning(r, fields.PCT, res.error, label, series, "PCT"));
-      }
-      metrics[series] = values;
-    }
-    return metrics;
-  }
-
-  const rows: ParsedFarmerRow[] = [];
-  let grandTotalFromSheet: Partial<Record<Series, SeriesValues>> | null = null;
-  let currentRegion: string | null = null;
-  const seenFarmerKeys = new Set<string>();
-
-  for (let r = dataStartRow; r <= sheet.rowCount; r++) {
-    const farmerText = resolveText(sheet, merges, r, farmerCol);
-    const rowNumValue = rowNumCol !== null ? readNumeric(sheet, merges, r, rowNumCol).value : null;
-
-    // Check whether any mapped metric column has a non-empty value on this row.
-    let hasAnyMetric = false;
-    for (const fields of seriesFieldMap.values()) {
-      for (const col of Object.values(fields)) {
-        if (col == null) continue;
-        const { value } = readNumeric(sheet, merges, r, col);
-        if (value != null && value !== 0) hasAnyMetric = true;
-      }
-    }
-
-    if (!farmerText && !hasAnyMetric) continue; // blank row
-
-    if (farmerText && SUBTOTAL_TEXT_RE.test(farmerText.trim())) {
-      // Subtotal/grand-total line identified by its own label (e.g. "Ҳудуд
-      // жами", "Жами:"). Checked before the row-number heuristic below
-      // because some source files repeat the previous farmer's row number
-      // on this line instead of leaving it blank.
-      if (GRAND_TOTAL_TEXT_RE.test(farmerText.trim()) && hasAnyMetric) {
-        // The sheet-wide grand total ("Хаммаси") — capture it (without the
-        // formula-error warnings a broken cell there would otherwise add;
-        // this is a cross-check value, not farmer data) so the importer can
-        // compare it against the actual sum of parsed farmers and flag it
-        // if the sheet's own total is stale.
-        const before = warnings.length;
-        grandTotalFromSheet = extractRowMetrics(r, farmerText);
-        warnings.length = before;
-      }
-      warnings.push({
-        severity: "INFO",
-        code: "SUBTOTAL_ROW_SKIPPED",
-        message: `Row ${r} ("${farmerText}") looks like a subtotal and was not counted as a farmer.`,
-        context: { row: r }
-      });
-      continue;
-    }
-
-    if (farmerText && rowNumValue == null && !hasAnyMetric) {
-      // Region separator row: a label with no row number and no figures.
-      currentRegion = farmerText.replace(/[":]+$/g, "").trim();
-      continue;
-    }
-
-    if (farmerText && rowNumValue == null && hasAnyMetric) {
-      // Subtotal/grand-total line (e.g. "Жами:" with aggregate figures).
-      warnings.push({
-        severity: "INFO",
-        code: "SUBTOTAL_ROW_SKIPPED",
-        message: `Row ${r} ("${farmerText}") looks like a subtotal and was not counted as a farmer.`,
-        context: { row: r }
-      });
-      continue;
-    }
-
-    if (!farmerText) continue;
-
-    const key = `${currentRegion ?? ""}::${farmerText}`;
-    if (seenFarmerKeys.has(key)) {
-      warnings.push({
-        severity: "WARNING",
-        code: "DUPLICATE_FARMER_ROW",
-        message: `Farmer "${farmerText}" appears more than once under the same region (row ${r}).`,
-        context: { row: r, farmer: farmerText, region: currentRegion }
-      });
-    }
-    seenFarmerKeys.add(key);
-
-    const metrics = extractRowMetrics(r, farmerText);
-    rows.push({ region: currentRegion, farmer: farmerText, metrics });
-  }
-
-  const { reportDate, method } = detectReportDate(filename, sheet, uploadTimestamp);
-
   return {
-    reportDate,
-    dateDetectionMethod: method,
+    reportGeneratedAt,
+    dateDetectionMethod,
+    dataPeriodStart: minDate,
+    dataPeriodEnd: maxDate,
     sheetName: sheet.name,
     rows,
     warnings,
@@ -403,21 +420,3 @@ export async function parseWorkbook(
     grandTotalFromSheet
   };
 }
-
-function formulaErrorWarning(
-  row: number,
-  col: number,
-  error: string,
-  farmer: string,
-  series: Series,
-  leaf: string
-): ImportWarning {
-  return {
-    severity: error === "UNPARSEABLE" ? "WARNING" : "ERROR",
-    code: error === "UNPARSEABLE" ? "UNPARSEABLE_NUMBER" : "FORMULA_ERROR",
-    message: `${error === "UNPARSEABLE" ? "Non-numeric value" : `Formula error (${error})`} at row ${row}, col ${col} for "${farmer}" (${series}.${leaf}). Treated as missing, not zero.`,
-    context: { row, col, farmer, series, leaf, error }
-  };
-}
-
-export type { ZoneMatch };

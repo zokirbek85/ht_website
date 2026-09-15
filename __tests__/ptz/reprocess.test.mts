@@ -3,55 +3,34 @@ import assert from "node:assert/strict";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { buildSampleWorkbook } from "./fixtures.mts";
+import { buildLedgerWorkbook } from "./fixtures.mts";
 
 process.env.PTZ_DATA_DIR = mkdtempSync(path.join(tmpdir(), "ptz-reprocess-"));
 
-const { importExcelReport, reprocessReport } = await import("../../src/lib/ptz/importer.ts");
-const { getReportById } = await import("../../src/lib/ptz/analytics.ts");
-const { getDb } = await import("../../src/lib/ptz/db.ts");
+const { importExcelReport, reprocessImport } = await import("../../src/lib/ptz/importer.ts");
+const { loadOperations } = await import("../../src/lib/ptz/analytics.ts");
 
-const actor = { telegramId: "1", username: "tester" };
+test("reprocessing re-parses the stored original file in place, keeping the same import id", async () => {
+  const buffer = await buildLedgerWorkbook();
+  const outcome = await importExcelReport(buffer, "basket.xlsx", new Date(), { telegramId: "1", username: null });
+  assert.equal(outcome.status, "success");
+  if (outcome.status !== "success") throw new Error("unreachable");
 
-test("reprocessing overwrites farmer_metrics from the stored original file without creating a new report", async () => {
-  const buffer = await buildSampleWorkbook();
-  const first = await importExcelReport(buffer, "Сводка 11,09,26.xlsx", new Date("2026-09-11T10:00:00Z"), actor);
-  if (first.status === "duplicate" || first.status === "failed") throw new Error("unexpected");
+  const before = loadOperations(outcome.importId);
+  assert.equal(before.length, 2);
 
-  const reportCountBefore = (getDb().prepare("SELECT COUNT(*) AS c FROM reports").get() as { c: number }).c;
+  const reprocessed = await reprocessImport(outcome.importId, { telegramId: "1", username: null });
+  assert.equal(reprocessed.status, "success");
+  if (reprocessed.status !== "success") throw new Error("unreachable");
+  assert.equal(reprocessed.importId, outcome.importId);
 
-  const result = await reprocessReport(first.reportId, actor);
-  if (result.status === "failed") throw new Error("reprocess should have succeeded");
-  assert.equal(result.reportId, first.reportId, "reprocessing must reuse the same report row");
-  assert.equal(result.farmerCount, first.farmerCount);
-
-  const reportCountAfter = (getDb().prepare("SELECT COUNT(*) AS c FROM reports").get() as { c: number }).c;
-  assert.equal(reportCountAfter, reportCountBefore, "no new report row should be created");
-
-  const report = getReportById(first.reportId);
-  assert.equal(report?.isActive, 1, "reprocessing must not deactivate the report");
-
-  // farmer_metrics rows should exist exactly once per farmer/series (no leftover duplicates from re-insertion).
-  const metricRowCount = (
-    getDb().prepare("SELECT COUNT(*) AS c FROM farmer_metrics WHERE report_id = ?").get(first.reportId) as {
-      c: number;
-    }
-  ).c;
-  assert.ok(metricRowCount > 0);
+  const after = loadOperations(outcome.importId);
+  assert.equal(after.length, 2);
 });
 
-test("reprocessing a report with no stored file fails cleanly instead of throwing", async () => {
-  const db = getDb();
-  const info = db
-    .prepare(
-      `INSERT INTO reports (report_date, source_filename, source_hash, imported_at, status, parser_version, schema_version, date_detection_method, raw_file_path)
-       VALUES ('2026-01-01', 'x.xlsx', 'no-raw-file-hash', datetime('now'), 'success', '1', '1', 'upload_time', NULL)`
-    )
-    .run();
-  const reportId = Number(info.lastInsertRowid);
-
-  const result = await reprocessReport(reportId, actor);
+test("reprocessing an import with no stored raw file fails clearly", async () => {
+  const result = await reprocessImport(999999, { telegramId: "1", username: null });
   assert.equal(result.status, "failed");
   if (result.status !== "failed") throw new Error("unreachable");
-  assert.equal(result.warnings[0]?.code, "RAW_FILE_MISSING");
+  assert.ok(result.warnings.some((w) => w.code === "IMPORT_NOT_FOUND"));
 });

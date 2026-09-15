@@ -9,10 +9,10 @@ export type StoredWarning = {
   context: Record<string, unknown> | null;
 };
 
-export function listWarningsForReport(reportId: number): StoredWarning[] {
+export function listWarningsForImport(importId: number): StoredWarning[] {
   const rows = getDb()
-    .prepare("SELECT id, severity, code, message, context FROM import_warnings WHERE report_id = ? ORDER BY id ASC")
-    .all(reportId) as { id: number; severity: string; code: string; message: string; context: string | null }[];
+    .prepare("SELECT id, severity, code, message, context FROM import_warnings WHERE import_id = ? ORDER BY id ASC")
+    .all(importId) as { id: number; severity: string; code: string; message: string; context: string | null }[];
 
   return rows.map((r) => ({
     id: r.id,

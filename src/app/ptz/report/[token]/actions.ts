@@ -19,6 +19,6 @@ export async function unlockReport(token: string, _prev: UnlockState, formData: 
   const record = getTempAccessRecord(token);
   if (record) await grantTempSession(token, record.expiresAt);
 
-  logAudit("TEMP_ACCESS_GRANTED", {}, { token: token.slice(0, 8), reportId: result.reportId });
+  logAudit("TEMP_ACCESS_GRANTED", {}, { token: token.slice(0, 8), importId: result.importId });
   return {};
 }

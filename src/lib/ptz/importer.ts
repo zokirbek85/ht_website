@@ -1,27 +1,22 @@
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import type { DatabaseSync } from "node:sqlite";
 import { dataDir, getDb, PARSER_VERSION, SCHEMA_VERSION } from "./db.ts";
 import { parseWorkbook } from "./parser.ts";
+import { validateRows, isRowValid } from "./validation.ts";
 import { logAudit } from "./audit.ts";
-import { SERIES, type ImportWarning, type ParsedFarmerRow, type Series, type SeriesValues } from "./types.ts";
-import type { DatabaseSync } from "node:sqlite";
+import type { GrandTotalCheck, ImportWarning, ParsedOperationRow } from "./types.ts";
 
 export type ImportOutcome =
-  | { status: "duplicate"; reportId: number; reportDate: string }
-  | {
-      status: "success" | "partial";
-      reportId: number;
-      reportDate: string;
-      warnings: ImportWarning[];
-      farmerCount: number;
-    }
+  | { status: "duplicate"; importId: number }
+  | { status: "success" | "partial"; importId: number; warnings: ImportWarning[]; rowCount: number; validRowCount: number }
   | { status: "failed"; warnings: ImportWarning[] };
 
 export type ImportActor = { telegramId: string; username: string | null };
 
-const CONSISTENCY_ABS_THRESHOLD = 1; // tons
-const CONSISTENCY_REL_THRESHOLD = 0.05; // 5%
+const CONSISTENCY_ABS_THRESHOLD_KG = 50;
+const CONSISTENCY_REL_THRESHOLD = 0.02; // 2%
 
 export async function importExcelReport(
   buffer: Buffer,
@@ -32,12 +27,12 @@ export async function importExcelReport(
   const db = getDb();
   const sourceHash = createHash("sha256").update(buffer).digest("hex");
 
-  const existing = db.prepare("SELECT id, report_date FROM reports WHERE source_hash = ?").get(sourceHash) as
-    | { id: number; report_date: string }
+  const existing = db.prepare("SELECT id FROM imports WHERE source_hash = ?").get(sourceHash) as
+    | { id: number }
     | undefined;
   if (existing) {
     logAudit("IMPORT_DUPLICATE", actor, { filename, sourceHash });
-    return { status: "duplicate", reportId: existing.id, reportDate: existing.report_date };
+    return { status: "duplicate", importId: existing.id };
   }
 
   const parsed = await parseWorkbook(buffer, filename, uploadTimestamp);
@@ -48,382 +43,307 @@ export async function importExcelReport(
     return { status: "failed", warnings };
   }
 
-  validateRows(parsed.rows, warnings);
-
-  const isFirstReportEver = (db.prepare("SELECT COUNT(*) AS c FROM reports").get() as { c: number }).c === 0;
-  if (isFirstReportEver) {
-    warnings.push({
-      severity: "INFO",
-      code: "BASELINE_SNAPSHOT",
-      message: "This is the first imported report — no prior data exists for daily-delta comparisons."
-    });
-  }
-
+  const validation = validateRows(parsed.rows, warnings);
   const rawFilePath = saveRawFile(buffer, filename, sourceHash);
-
-  const previousForDate = db
-    .prepare("SELECT id FROM reports WHERE report_date = ? AND is_active = 1")
-    .get(parsed.reportDate) as { id: number } | undefined;
-
   const errorCountPre = warnings.filter((w) => w.severity === "ERROR").length;
   const status: "success" | "partial" = errorCountPre > 0 ? "partial" : "success";
 
   db.exec("BEGIN");
   try {
-    if (previousForDate) {
-      db.prepare("UPDATE reports SET is_active = 0 WHERE id = ?").run(previousForDate.id);
-      warnings.push({
-        severity: "INFO",
-        code: "REPORT_REPLACED",
-        message: `Replaced the previous import for ${parsed.reportDate} (report #${previousForDate.id}).`
-      });
-    }
+    db.prepare("UPDATE imports SET is_active = 0 WHERE is_active = 1").run();
 
-    const insertReport = db.prepare(
-      `INSERT INTO reports
-        (report_date, source_filename, source_hash, imported_at, imported_by, telegram_user_id, status,
-         parser_version, schema_version, date_detection_method, is_active, warning_count, error_count, raw_file_path)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)`
-    );
-    const info = insertReport.run(
-      parsed.reportDate,
-      filename,
-      sourceHash,
-      new Date().toISOString(),
-      actor.username,
-      actor.telegramId,
-      status,
-      PARSER_VERSION,
-      SCHEMA_VERSION,
-      parsed.dateDetectionMethod,
-      warnings.length,
-      errorCountPre,
-      rawFilePath
-    );
-    const reportId = Number(info.lastInsertRowid);
+    const info = db
+      .prepare(
+        `INSERT INTO imports
+          (report_generated_at, date_detection_method, data_period_start, data_period_end, source_filename,
+           source_hash, imported_at, imported_by, telegram_user_id, status, parser_version, schema_version,
+           is_active, row_count, valid_row_count, invalid_row_count, warning_count, error_count, raw_file_path)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        parsed.reportGeneratedAt,
+        parsed.dateDetectionMethod,
+        parsed.dataPeriodStart,
+        parsed.dataPeriodEnd,
+        filename,
+        sourceHash,
+        new Date().toISOString(),
+        actor.username,
+        actor.telegramId,
+        status,
+        PARSER_VERSION,
+        SCHEMA_VERSION,
+        parsed.rows.length,
+        validation.validRows,
+        validation.invalidRows,
+        warnings.length,
+        errorCountPre,
+        rawFilePath
+      );
+    const importId = Number(info.lastInsertRowid);
 
-    writeFarmerMetrics(db, reportId, parsed.reportDate, parsed.rows, warnings);
-    checkTotalsConsistency(reportId, warnings);
-    checkGrandTotalConsistency(reportId, parsed.grandTotalFromSheet, warnings);
+    writeOperations(db, importId, parsed.rows);
+    checkGrandTotalConsistency(db, importId, parsed.grandTotalFromSheet, warnings);
 
     const finalErrorCount = warnings.filter((w) => w.severity === "ERROR").length;
-    db.prepare("UPDATE reports SET warning_count = ?, error_count = ? WHERE id = ?").run(
+    db.prepare("UPDATE imports SET warning_count = ?, error_count = ? WHERE id = ?").run(
       warnings.length,
       finalErrorCount,
-      reportId
+      importId
     );
 
     const insertWarning = db.prepare(
-      "INSERT INTO import_warnings (report_id, severity, code, message, context) VALUES (?, ?, ?, ?, ?)"
+      "INSERT INTO import_warnings (import_id, severity, code, message, context) VALUES (?, ?, ?, ?, ?)"
     );
-    for (const w of warnings.slice(0, 500)) {
-      insertWarning.run(reportId, w.severity, w.code, w.message, w.context ? JSON.stringify(w.context) : null);
+    for (const w of warnings.slice(0, 1000)) {
+      insertWarning.run(importId, w.severity, w.code, w.message, w.context ? JSON.stringify(w.context) : null);
     }
 
     db.exec("COMMIT");
 
     logAudit("IMPORT", actor, {
       filename,
-      reportId,
-      reportDate: parsed.reportDate,
+      importId,
       rows: parsed.rows.length,
+      validRows: validation.validRows,
       warnings: warnings.length,
       errors: finalErrorCount,
       status
     });
 
-    return { status, reportId, reportDate: parsed.reportDate, warnings, farmerCount: parsed.rows.length };
+    return { status, importId, warnings, rowCount: parsed.rows.length, validRowCount: validation.validRows };
   } catch (err) {
     db.exec("ROLLBACK");
     throw err;
   }
 }
 
-function writeFarmerMetrics(
+function writeOperations(db: DatabaseSync, importId: number, rows: ParsedOperationRow[]): void {
+  const insertOp = db.prepare(
+    `INSERT INTO operations
+      (import_id, row_number, identity_key, is_duplicate, is_valid, farmer_id, contract_id, buyer_id,
+       preparation_point_id, cluster_id, acceptance_date, acceptance_record_no, pk17_number, pk17_registered_at,
+       pk17_signed_at, batch_no, plot_type, plot_no, variety_declared, generation_declared,
+       industrial_grade_declared, class_declared, picking_method, lab_2hl_number, industrial_grade_lab, class_lab,
+       gross_kg, tare_kg, physical_kg, impurity_pct, calculated_kg, moisture_pct, conditioned_kg, markup,
+       discount, unit_price, amount, transport_fee, seed_cotton_fee, other_fee_total, vehicle_type,
+       vehicle_plate, trailer_count, trailer_plate)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  );
+
+  const seenIdentityKeys = new Set<string>();
+
+  for (const row of rows) {
+    const farmerId = getOrCreateFarmer(db, row.farmerName, row.farmerInn, row.farmerRegion, row.farmerDistrict);
+    const contractId = row.contractNumber
+      ? getOrCreateContract(db, row.contractNumber, row.contractType, row.contractQty, farmerId)
+      : null;
+    const buyerId = row.buyerName ? getOrCreateBuyer(db, row.buyerName, row.buyerInn) : null;
+    const preparationPointId = row.preparationPointName
+      ? getOrCreatePreparationPoint(db, row.preparationPointName, row.preparationDistrict, row.preparationRegion)
+      : null;
+    const clusterId = row.clusterName ? getOrCreateCluster(db, row.clusterName) : null;
+
+    const isDuplicate = seenIdentityKeys.has(row.identityKey);
+    seenIdentityKeys.add(row.identityKey);
+    const isValid = isRowValid(row);
+
+    insertOp.run(
+      importId,
+      row.rowNumber,
+      row.identityKey,
+      isDuplicate ? 1 : 0,
+      isValid ? 1 : 0,
+      farmerId,
+      contractId,
+      buyerId,
+      preparationPointId,
+      clusterId,
+      row.acceptanceDate,
+      row.acceptanceRecordNo,
+      row.pk17Number,
+      row.pk17RegisteredAt,
+      row.pk17SignedAt,
+      row.batchNo,
+      row.plotType,
+      row.plotNo,
+      row.varietyDeclared,
+      row.generationDeclared,
+      row.industrialGradeDeclared,
+      row.classDeclared,
+      row.pickingMethod,
+      row.lab2hlNumber,
+      row.industrialGradeLab,
+      row.classLab,
+      row.grossKg,
+      row.tareKg,
+      row.physicalKg,
+      row.impurityPct,
+      row.calculatedKg,
+      row.moisturePct,
+      row.conditionedKg,
+      row.markup,
+      row.discount,
+      row.unitPrice,
+      row.amount,
+      row.transportFee,
+      row.seedCottonFee,
+      row.otherFeeTotal,
+      row.vehicleType,
+      row.vehiclePlate,
+      row.trailerCount,
+      row.trailerPlate
+    );
+  }
+}
+
+function checkGrandTotalConsistency(
   db: DatabaseSync,
-  reportId: number,
-  reportDate: string,
-  rows: ParsedFarmerRow[],
+  importId: number,
+  grandTotalFromSheet: GrandTotalCheck | null,
   warnings: ImportWarning[]
 ): void {
-  const upsertMetric = db.prepare(
-    `INSERT INTO farmer_metrics
-      (report_id, farmer_id, series, plan_qty, source_daily_qty, source_cumulative_qty, calculated_daily_delta, completion_pct)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(report_id, farmer_id, series) DO UPDATE SET
-       plan_qty = excluded.plan_qty,
-       source_daily_qty = excluded.source_daily_qty,
-       source_cumulative_qty = excluded.source_cumulative_qty,
-       calculated_daily_delta = excluded.calculated_daily_delta,
-       completion_pct = excluded.completion_pct`
-  );
-  const previousCumStmt = db.prepare(
-    `SELECT fm.source_cumulative_qty AS cum
-     FROM farmer_metrics fm
-     JOIN reports r ON r.id = fm.report_id
-     WHERE fm.farmer_id = ? AND fm.series = ? AND r.is_active = 1 AND r.report_date < ?
-     ORDER BY r.report_date DESC LIMIT 1`
-  );
+  if (!grandTotalFromSheet) return;
+  const columnByField: Record<string, string> = { physicalKg: "physical_kg", conditionedKg: "conditioned_kg", amount: "amount" };
 
-  for (const row of rows) {
-    const regionId = row.region ? getOrCreateRegion(row.region) : null;
-    const farmerId = getOrCreateFarmer(row.farmer, regionId);
-
-    for (const series of SERIES) {
-      const values = row.metrics[series];
-      if (!values) continue;
-
-      const planQty = values.planQty ?? null;
-      const cumulativeQty = values.sourceCumulativeQty ?? null;
-      let completionPct = values.completionPct ?? null;
-
-      if (completionPct == null && planQty != null && planQty !== 0 && cumulativeQty != null) {
-        completionPct = (cumulativeQty / planQty) * 100;
-      } else if (completionPct == null && planQty === 0 && cumulativeQty != null) {
-        warnings.push({
-          severity: "WARNING",
-          code: "PLAN_IS_ZERO",
-          message: `Plan is zero for "${row.farmer}" (${series}); completion % cannot be computed.`,
-          context: { farmer: row.farmer, series }
-        });
-      }
-
-      const previous = previousCumStmt.get(farmerId, series, reportDate) as { cum: number | null } | undefined;
-
-      let calculatedDelta: number | null = null;
-      if (previous && previous.cum != null && cumulativeQty != null) {
-        calculatedDelta = cumulativeQty - previous.cum;
-      }
-
-      if (
-        calculatedDelta != null &&
-        values.sourceDailyQty != null &&
-        Math.abs(calculatedDelta - values.sourceDailyQty) >
-          Math.max(CONSISTENCY_ABS_THRESHOLD, CONSISTENCY_REL_THRESHOLD * Math.abs(values.sourceDailyQty))
-      ) {
-        warnings.push({
-          severity: "WARNING",
-          code: "DATA_CONSISTENCY_WARNING",
-          message: `"Бир кунда" (${values.sourceDailyQty}) does not match the calculated delta (${calculatedDelta.toFixed(
-            2
-          )}) for "${row.farmer}" (${series}).`,
-          context: { farmer: row.farmer, series, sourceDaily: values.sourceDailyQty, calculatedDelta }
-        });
-      }
-
-      upsertMetric.run(
-        reportId,
-        farmerId,
-        series,
-        planQty,
-        values.sourceDailyQty ?? null,
-        cumulativeQty,
-        calculatedDelta,
-        completionPct
-      );
-    }
-  }
-}
-
-export type ReprocessOutcome =
-  | { status: "success" | "partial"; reportId: number; warnings: ImportWarning[]; farmerCount: number }
-  | { status: "failed"; warnings: ImportWarning[] };
-
-/**
- * Re-runs the current parser against a report's already-stored original
- * file and overwrites its farmer_metrics/warnings in place — for when a
- * parser fix needs to correct a report that was imported before the fix
- * shipped. Unlike importExcelReport(), this intentionally bypasses the
- * source_hash duplicate check (the whole point is reprocessing identical
- * bytes) and never touches is_active or report identity.
- */
-export async function reprocessReport(reportId: number, actor: ImportActor): Promise<ReprocessOutcome> {
-  const db = getDb();
-  const report = db.prepare("SELECT * FROM reports WHERE id = ?").get(reportId) as
-    | { id: number; report_date: string; source_filename: string; raw_file_path: string | null }
-    | undefined;
-
-  if (!report) {
-    return { status: "failed", warnings: [{ severity: "ERROR", code: "REPORT_NOT_FOUND", message: `Report #${reportId} not found.` }] };
-  }
-  if (!report.raw_file_path) {
-    return {
-      status: "failed",
-      warnings: [
-        {
-          severity: "ERROR",
-          code: "RAW_FILE_MISSING",
-          message: `Report #${reportId} has no stored original file to reprocess from.`
-        }
-      ]
-    };
-  }
-
-  const buffer = readFileSync(path.join(dataDir(), report.raw_file_path));
-  const parsed = await parseWorkbook(buffer, report.source_filename, new Date(report.report_date));
-  const warnings = [...parsed.warnings];
-
-  if (parsed.rows.length === 0) {
-    return { status: "failed", warnings };
-  }
-
-  validateRows(parsed.rows, warnings);
-
-  db.exec("BEGIN");
-  try {
-    db.prepare("DELETE FROM farmer_metrics WHERE report_id = ?").run(reportId);
-    db.prepare("DELETE FROM import_warnings WHERE report_id = ?").run(reportId);
-
-    writeFarmerMetrics(db, reportId, report.report_date, parsed.rows, warnings);
-    checkTotalsConsistency(reportId, warnings);
-    checkGrandTotalConsistency(reportId, parsed.grandTotalFromSheet, warnings);
-
-    const finalErrorCount = warnings.filter((w) => w.severity === "ERROR").length;
-    const status: "success" | "partial" = finalErrorCount > 0 ? "partial" : "success";
-
-    db.prepare(
-      "UPDATE reports SET parser_version = ?, warning_count = ?, error_count = ?, status = ? WHERE id = ?"
-    ).run(PARSER_VERSION, warnings.length, finalErrorCount, status, reportId);
-
-    const insertWarning = db.prepare(
-      "INSERT INTO import_warnings (report_id, severity, code, message, context) VALUES (?, ?, ?, ?, ?)"
-    );
-    for (const w of warnings.slice(0, 500)) {
-      insertWarning.run(reportId, w.severity, w.code, w.message, w.context ? JSON.stringify(w.context) : null);
-    }
-
-    db.exec("COMMIT");
-
-    logAudit("REPROCESSED", actor, {
-      reportId,
-      parserVersion: PARSER_VERSION,
-      rows: parsed.rows.length,
-      warnings: warnings.length,
-      errors: finalErrorCount,
-      status
-    });
-
-    return { status, reportId, warnings, farmerCount: parsed.rows.length };
-  } catch (err) {
-    db.exec("ROLLBACK");
-    throw err;
-  }
-}
-
-function validateRows(rows: ParsedFarmerRow[], warnings: ImportWarning[]): void {
-  for (const row of rows) {
-    for (const [series, values] of Object.entries(row.metrics) as [Series, ParsedFarmerRow["metrics"][Series]][]) {
-      if (!values) continue;
-      for (const [field, val] of Object.entries(values)) {
-        if (typeof val === "number" && val < 0) {
-          warnings.push({
-            severity: "WARNING",
-            code: "NEGATIVE_VALUE",
-            message: `Negative value for "${row.farmer}" (${series}.${field}): ${val}.`,
-            context: { farmer: row.farmer, series, field, value: val }
-          });
-        }
-      }
-    }
-  }
-}
-
-function checkTotalsConsistency(reportId: number, warnings: ImportWarning[]): void {
-  const db = getDb();
-  const rows = db
-    .prepare(
-      `SELECT f.name AS farmer, fm.series AS series, fm.source_cumulative_qty AS cum
-       FROM farmer_metrics fm JOIN farmers f ON f.id = fm.farmer_id
-       WHERE fm.report_id = ?`
-    )
-    .all(reportId) as { farmer: string; series: Series; cum: number | null }[];
-
-  const byFarmer = new Map<string, Partial<Record<Series, number | null>>>();
-  for (const r of rows) {
-    const entry = byFarmer.get(r.farmer) ?? {};
-    entry[r.series] = r.cum;
-    byFarmer.set(r.farmer, entry);
-  }
-
-  for (const [farmer, series] of byFarmer.entries()) {
-    if (series.TOTAL == null) continue;
-    const sum = (series.FUTURES ?? 0) + (series.FORWARD ?? 0) + (series.TEMPORARY_STORAGE ?? 0);
-    const diff = Math.abs(sum - series.TOTAL);
-    if (diff > Math.max(CONSISTENCY_ABS_THRESHOLD, CONSISTENCY_REL_THRESHOLD * Math.abs(series.TOTAL))) {
+  for (const [field, sheetValue] of Object.entries(grandTotalFromSheet)) {
+    if (sheetValue == null) continue;
+    const column = columnByField[field];
+    if (!column) continue;
+    const row = db
+      .prepare(`SELECT SUM(${column}) AS total FROM operations WHERE import_id = ? AND is_duplicate = 0`)
+      .get(importId) as { total: number | null };
+    const computed = row.total ?? 0;
+    const diff = Math.abs(computed - sheetValue);
+    if (diff > Math.max(CONSISTENCY_ABS_THRESHOLD_KG, CONSISTENCY_REL_THRESHOLD * Math.abs(sheetValue))) {
       warnings.push({
         severity: "WARNING",
-        code: "TOTALS_MISMATCH",
-        message: `Шартнома турлари йиғиндиси (${sum.toFixed(2)}) умумий қиймат (${series.TOTAL.toFixed(
-          2
-        )}) билан мос келмайди: "${farmer}".`,
-        context: { farmer, sum, total: series.TOTAL, diff }
+        code: "GRAND_TOTAL_MISMATCH",
+        message: `Файлнинг ўзидаги "Жами" қатори (${field}: ${sheetValue.toFixed(2)}) операциялар йиғиндисидан (${computed.toFixed(2)}) фарқ қилади.`,
+        context: { field, sheetValue, computed, diff }
       });
     }
   }
 }
 
-/**
- * Cross-checks the sum of every parsed farmer's TOTAL.planQty/cumulativeQty
- * against the sheet's own grand-total row (e.g. "Хаммаси"), when one was
- * found. That row is very often a number pasted once and never updated as
- * more farmer rows get added to the sheet later — when it drifts from the
- * real sum, that's worth surfacing rather than silently trusting whichever
- * number happens to be on that one line.
- */
-function checkGrandTotalConsistency(
-  reportId: number,
-  grandTotalFromSheet: Partial<Record<Series, SeriesValues>> | null,
-  warnings: ImportWarning[]
-): void {
-  if (!grandTotalFromSheet) return;
+export type ReprocessOutcome =
+  | { status: "success" | "partial"; importId: number; warnings: ImportWarning[]; rowCount: number }
+  | { status: "failed"; warnings: ImportWarning[] };
+
+/** Re-runs the current parser against an import's stored original file and overwrites its operations/warnings in place. */
+export async function reprocessImport(importId: number, actor: ImportActor): Promise<ReprocessOutcome> {
   const db = getDb();
+  const imp = db.prepare("SELECT * FROM imports WHERE id = ?").get(importId) as
+    | { id: number; source_filename: string; raw_file_path: string | null; report_generated_at: string | null }
+    | undefined;
 
-  for (const series of SERIES) {
-    const sheetValues = grandTotalFromSheet[series];
-    if (!sheetValues) continue;
+  if (!imp) {
+    return { status: "failed", warnings: [{ severity: "ERROR", code: "IMPORT_NOT_FOUND", message: `Import #${importId} not found.` }] };
+  }
+  if (!imp.raw_file_path) {
+    return {
+      status: "failed",
+      warnings: [{ severity: "ERROR", code: "RAW_FILE_MISSING", message: `Import #${importId} has no stored original file to reprocess from.` }]
+    };
+  }
 
-    for (const [field, sheetValue] of Object.entries(sheetValues) as [keyof SeriesValues, number | null | undefined][]) {
-      if (sheetValue == null) continue;
-      const column = field === "planQty" ? "plan_qty" : field === "sourceCumulativeQty" ? "source_cumulative_qty" : null;
-      if (!column) continue; // only plan/cumulative are meaningful to sum and compare this way
+  const buffer = readFileSync(path.join(dataDir(), imp.raw_file_path));
+  const parsed = await parseWorkbook(buffer, imp.source_filename, new Date());
+  const warnings = [...parsed.warnings];
 
-      const row = db
-        .prepare(`SELECT SUM(${column}) AS total FROM farmer_metrics WHERE report_id = ? AND series = ?`)
-        .get(reportId, series) as { total: number | null };
-      const computed = row.total ?? 0;
-      const diff = Math.abs(computed - sheetValue);
+  if (parsed.rows.length === 0) return { status: "failed", warnings };
 
-      if (diff > Math.max(CONSISTENCY_ABS_THRESHOLD, CONSISTENCY_REL_THRESHOLD * Math.abs(sheetValue))) {
-        warnings.push({
-          severity: "WARNING",
-          code: "GRAND_TOTAL_MISMATCH",
-          message: `Файлнинг ўзидаги "Хаммаси" қатори (${sheetValue.toFixed(
-            2
-          )}) фермерлар йиғиндисидан (${computed.toFixed(
-            2
-          )}) фарқ қилади (${series}.${field}) — жадвалдаги умумий сатр эскирган бўлиши мумкин.`,
-          context: { series, field, sheetValue, computed, diff }
-        });
-      }
+  const validation = validateRows(parsed.rows, warnings);
+
+  db.exec("BEGIN");
+  try {
+    db.prepare("DELETE FROM operations WHERE import_id = ?").run(importId);
+    db.prepare("DELETE FROM import_warnings WHERE import_id = ?").run(importId);
+
+    writeOperations(db, importId, parsed.rows);
+    checkGrandTotalConsistency(db, importId, parsed.grandTotalFromSheet, warnings);
+
+    const finalErrorCount = warnings.filter((w) => w.severity === "ERROR").length;
+    const status: "success" | "partial" = finalErrorCount > 0 ? "partial" : "success";
+
+    db.prepare(
+      `UPDATE imports SET parser_version = ?, row_count = ?, valid_row_count = ?, invalid_row_count = ?,
+       warning_count = ?, error_count = ?, status = ? WHERE id = ?`
+    ).run(
+      PARSER_VERSION,
+      parsed.rows.length,
+      validation.validRows,
+      validation.invalidRows,
+      warnings.length,
+      finalErrorCount,
+      status,
+      importId
+    );
+
+    const insertWarning = db.prepare(
+      "INSERT INTO import_warnings (import_id, severity, code, message, context) VALUES (?, ?, ?, ?, ?)"
+    );
+    for (const w of warnings.slice(0, 1000)) {
+      insertWarning.run(importId, w.severity, w.code, w.message, w.context ? JSON.stringify(w.context) : null);
     }
+
+    db.exec("COMMIT");
+
+    logAudit("REPROCESSED", actor, { importId, parserVersion: PARSER_VERSION, rows: parsed.rows.length, warnings: warnings.length, status });
+
+    return { status, importId, warnings, rowCount: parsed.rows.length };
+  } catch (err) {
+    db.exec("ROLLBACK");
+    throw err;
   }
 }
 
-function getOrCreateRegion(name: string): number {
-  const db = getDb();
-  const existing = db.prepare("SELECT id FROM regions WHERE name = ?").get(name) as { id: number } | undefined;
-  if (existing) return existing.id;
-  const info = db.prepare("INSERT INTO regions (name) VALUES (?)").run(name);
+function getOrCreateFarmer(db: DatabaseSync, name: string, inn: string | null, region: string | null, district: string | null): number {
+  const existing = inn
+    ? (db.prepare("SELECT id FROM farmers WHERE inn = ?").get(inn) as { id: number } | undefined)
+    : (db.prepare("SELECT id FROM farmers WHERE name = ? AND inn IS NULL").get(name) as { id: number } | undefined);
+  if (existing) {
+    db.prepare("UPDATE farmers SET name = ?, region = ?, district = ? WHERE id = ?").run(name, region, district, existing.id);
+    return existing.id;
+  }
+  const info = db.prepare("INSERT INTO farmers (name, inn, region, district) VALUES (?, ?, ?, ?)").run(name, inn, region, district);
   return Number(info.lastInsertRowid);
 }
 
-function getOrCreateFarmer(name: string, regionId: number | null): number {
-  const db = getDb();
-  const existing = db.prepare("SELECT id FROM farmers WHERE name = ? AND region_id IS ?").get(name, regionId) as
-    | { id: number }
+function getOrCreateContract(db: DatabaseSync, contractNumber: string, contractType: string | null, contractQty: number | null, farmerId: number): number {
+  const existing = db.prepare("SELECT id, contract_qty FROM contracts WHERE contract_number = ?").get(contractNumber) as
+    | { id: number; contract_qty: number | null }
     | undefined;
+  if (existing) {
+    if (contractQty != null && existing.contract_qty != null && Math.abs(contractQty - existing.contract_qty) > 0.01) {
+      db.prepare("UPDATE contracts SET contract_qty = ? WHERE id = ?").run(contractQty, existing.id);
+    }
+    return existing.id;
+  }
+  const info = db
+    .prepare("INSERT INTO contracts (contract_number, contract_type, farmer_id, contract_qty) VALUES (?, ?, ?, ?)")
+    .run(contractNumber, contractType, farmerId, contractQty);
+  return Number(info.lastInsertRowid);
+}
+
+function getOrCreateBuyer(db: DatabaseSync, name: string, inn: string | null): number {
+  const existing = db.prepare("SELECT id FROM buyers WHERE name = ?").get(name) as { id: number } | undefined;
   if (existing) return existing.id;
-  const info = db.prepare("INSERT INTO farmers (name, region_id) VALUES (?, ?)").run(name, regionId);
+  const info = db.prepare("INSERT INTO buyers (name, inn) VALUES (?, ?)").run(name, inn);
+  return Number(info.lastInsertRowid);
+}
+
+function getOrCreatePreparationPoint(db: DatabaseSync, name: string, district: string | null, region: string | null): number {
+  const existing = db.prepare("SELECT id FROM preparation_points WHERE name = ?").get(name) as { id: number } | undefined;
+  if (existing) return existing.id;
+  const info = db.prepare("INSERT INTO preparation_points (name, district, region) VALUES (?, ?, ?)").run(name, district, region);
+  return Number(info.lastInsertRowid);
+}
+
+function getOrCreateCluster(db: DatabaseSync, name: string): number {
+  const existing = db.prepare("SELECT id FROM clusters WHERE name = ?").get(name) as { id: number } | undefined;
+  if (existing) return existing.id;
+  const info = db.prepare("INSERT INTO clusters (name) VALUES (?)").run(name);
   return Number(info.lastInsertRowid);
 }
 

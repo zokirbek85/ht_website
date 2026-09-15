@@ -24,12 +24,29 @@ export default async function TempReportPage({ params }: { params: Promise<{ tok
     return <PasswordGate token={token} />;
   }
 
-  const bundle = buildReportBundle(record.reportId);
+  const bundle = buildReportBundle(record.importId);
   if (!bundle) {
     return <StatusPage title="Хато" message="Ҳисобот маълумотлари топилмади." />;
   }
 
-  return <Dashboard bundle={bundle} />;
+  const data = {
+    import: bundle.import,
+    summary: bundle.summary,
+    contracts: bundle.contracts,
+    farmers: bundle.farmers,
+    topFarmers: bundle.topFarmers,
+    bottomFarmers: bundle.bottomFarmers,
+    clusters: bundle.clusters,
+    quality: bundle.quality,
+    finance: bundle.finance,
+    weightBridge: bundle.weightBridge,
+    dailyTrend: bundle.dailyTrend,
+    alerts: bundle.alerts,
+    assumptions: bundle.assumptions,
+    operations: bundle.engine.allRows
+  };
+
+  return <Dashboard data={data} />;
 }
 
 function StatusPage({ title, message }: { title: string; message: string }) {

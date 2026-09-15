@@ -20,7 +20,7 @@ function hashPassword(password: string, salt: Buffer): Buffer {
 
 export type CreatedTempAccess = { token: string; password: string; expiresAt: string };
 
-export function createTempAccess(reportId: number, createdFor: string | null): CreatedTempAccess {
+export function createTempAccess(importId: number, createdFor: string | null): CreatedTempAccess {
   const token = randomBytes(24).toString("base64url");
   const password = generatePassword();
   const salt = randomBytes(16);
@@ -32,12 +32,12 @@ export function createTempAccess(reportId: number, createdFor: string | null): C
 
   getDb()
     .prepare(
-      `INSERT INTO temp_access (token_hash, report_id, password_hash, password_salt, created_at, expires_at, created_for)
+      `INSERT INTO temp_access (token_hash, import_id, password_hash, password_salt, created_at, expires_at, created_for)
        VALUES (?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       hashToken(token),
-      reportId,
+      importId,
       passwordHash.toString("hex"),
       salt.toString("hex"),
       createdAt.toISOString(),
@@ -49,17 +49,17 @@ export function createTempAccess(reportId: number, createdFor: string | null): C
 }
 
 export type TempAccessCheck =
-  | { ok: true; reportId: number }
+  | { ok: true; importId: number }
   | { ok: false; reason: "not_found" | "expired" | "wrong_password" };
 
 export function checkTempAccess(token: string, password: string): TempAccessCheck {
   const db = getDb();
   const row = db
     .prepare(
-      `SELECT id, report_id, password_hash, password_salt, expires_at FROM temp_access WHERE token_hash = ?`
+      `SELECT id, import_id, password_hash, password_salt, expires_at FROM temp_access WHERE token_hash = ?`
     )
     .get(hashToken(token)) as
-    | { id: number; report_id: number; password_hash: string; password_salt: string; expires_at: string }
+    | { id: number; import_id: number; password_hash: string; password_salt: string; expires_at: string }
     | undefined;
 
   if (!row) return { ok: false, reason: "not_found" };
@@ -82,18 +82,18 @@ export function checkTempAccess(token: string, password: string): TempAccessChec
   logAttempt(match);
 
   if (!match) return { ok: false, reason: "wrong_password" };
-  return { ok: true, reportId: row.report_id };
+  return { ok: true, importId: row.import_id };
 }
 
 /** Token-only lookup (no password) — used to render the password gate / expired page and, once a
  * session cookie proves the password was already checked, to load the report without asking again. */
-export function getTempAccessRecord(token: string): { reportId: number; expiresAt: string; expired: boolean } | null {
+export function getTempAccessRecord(token: string): { importId: number; expiresAt: string; expired: boolean } | null {
   const row = getDb()
-    .prepare("SELECT report_id, expires_at FROM temp_access WHERE token_hash = ?")
-    .get(hashToken(token)) as { report_id: number; expires_at: string } | undefined;
+    .prepare("SELECT import_id, expires_at FROM temp_access WHERE token_hash = ?")
+    .get(hashToken(token)) as { import_id: number; expires_at: string } | undefined;
   if (!row) return null;
   return {
-    reportId: row.report_id,
+    importId: row.import_id,
     expiresAt: row.expires_at,
     expired: new Date(row.expires_at).getTime() < Date.now()
   };

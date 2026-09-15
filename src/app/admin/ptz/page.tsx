@@ -2,15 +2,15 @@ import { redirect } from "next/navigation";
 import { isAuthenticated } from "@/lib/auth";
 import { AdminNav } from "@/components/admin/AdminNav";
 import { PtzUserForm } from "@/components/admin/PtzUserForm";
-import { listAllReports } from "@/lib/ptz/analytics";
+import { listAllImports } from "@/lib/ptz/analytics";
 import { listTelegramUsers } from "@/lib/ptz/telegramUsers";
 import { listAuditLog } from "@/lib/ptz/audit";
-import { listWarningsForReport } from "@/lib/ptz/warnings";
+import { listWarningsForImport } from "@/lib/ptz/warnings";
 import { removePtzUser, reprocessPtzReport } from "@/app/admin/ptz/actions";
 
-function fmtDate(iso: string): string {
-  const [y, m, d] = iso.split("-");
-  return `${d}.${m}.${y}`;
+function fmtDate(iso: string | null): string {
+  if (!iso) return "—";
+  return iso.slice(0, 10).split("-").reverse().join(".");
 }
 
 export default async function AdminPtzPage() {
@@ -18,7 +18,7 @@ export default async function AdminPtzPage() {
     redirect("/admin/login");
   }
 
-  const reports = listAllReports(30);
+  const reports = listAllImports(30);
   const users = listTelegramUsers();
   const auditEntries = listAuditLog(30);
 
@@ -102,7 +102,7 @@ export default async function AdminPtzPage() {
                   const reprocessWithId = reprocessPtzReport.bind(null, r.id);
                   return (
                     <tr key={r.id} className="border-t border-[var(--border)] align-top">
-                      <td className="px-3 py-2">{fmtDate(r.reportDate)}</td>
+                      <td className="px-3 py-2">{fmtDate(r.dataPeriodEnd)}</td>
                       <td className="px-3 py-2">{r.sourceFilename}</td>
                       <td className="px-3 py-2">{r.status}</td>
                       <td className="px-3 py-2">{r.isActive ? "yes" : "superseded"}</td>
@@ -144,7 +144,7 @@ export default async function AdminPtzPage() {
 }
 
 function ReportWarnings({ reportId }: { reportId: number }) {
-  const warnings = listWarningsForReport(reportId);
+  const warnings = listWarningsForImport(reportId);
   if (warnings.length === 0) return null;
   return (
     <section className="mt-10">

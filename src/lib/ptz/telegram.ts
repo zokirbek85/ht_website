@@ -6,11 +6,22 @@ function botToken(): string {
   return t;
 }
 
-export async function sendMessage(chatId: string | number, text: string): Promise<void> {
+export type InlineKeyboardButton = { text: string; url: string };
+
+export async function sendMessage(
+  chatId: string | number,
+  text: string,
+  buttons?: InlineKeyboardButton[][]
+): Promise<void> {
   const res = await fetch(`${API_BASE}/bot${botToken()}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: chatId, text, disable_web_page_preview: true })
+    body: JSON.stringify({
+      chat_id: chatId,
+      text,
+      disable_web_page_preview: true,
+      ...(buttons ? { reply_markup: { inline_keyboard: buttons } } : {})
+    })
   });
   if (!res.ok) {
     console.error("PTZ bot sendMessage failed:", res.status, await res.text());

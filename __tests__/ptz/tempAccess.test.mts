@@ -10,28 +10,28 @@ const { createTempAccess, checkTempAccess, getTempAccessRecord } = await import(
 const { setSetting } = await import("../../src/lib/ptz/settings.ts");
 const { getDb } = await import("../../src/lib/ptz/db.ts");
 
-// A temp_access row needs a real reports.id to satisfy the foreign key.
-function fakeReportId(): number {
+// A temp_access row needs a real imports.id to satisfy the foreign key.
+function fakeImportId(): number {
   return Number(
     getDb()
       .prepare(
-        `INSERT INTO reports (report_date, source_filename, source_hash, imported_at, status, parser_version, schema_version, date_detection_method)
-         VALUES ('2026-09-11', 'x.xlsx', ?, datetime('now'), 'success', '1', '1', 'upload_time')`
+        `INSERT INTO imports (date_detection_method, source_filename, source_hash, imported_at, status, parser_version, schema_version)
+         VALUES ('upload_time', 'x.xlsx', ?, datetime('now'), 'success', '1', '1')`
       )
       .run(`hash-${Math.random()}`).lastInsertRowid
   );
 }
 
 test("correct token + correct password grants access", () => {
-  const reportId = fakeReportId();
-  const access = createTempAccess(reportId, "telegram:1");
+  const importId = fakeImportId();
+  const access = createTempAccess(importId, "telegram:1");
   const result = checkTempAccess(access.token, access.password);
-  assert.deepEqual(result, { ok: true, reportId });
+  assert.deepEqual(result, { ok: true, importId });
 });
 
 test("wrong password is rejected", () => {
-  const reportId = fakeReportId();
-  const access = createTempAccess(reportId, "telegram:1");
+  const importId = fakeImportId();
+  const access = createTempAccess(importId, "telegram:1");
   const result = checkTempAccess(access.token, "WRONGPASS");
   assert.equal(result.ok, false);
   if (result.ok) throw new Error("unreachable");
@@ -47,8 +47,8 @@ test("unknown token is rejected", () => {
 
 test("expired link is rejected even with the correct password", () => {
   setSetting("temp_link_ttl_minutes", "-1"); // force immediate expiry
-  const reportId = fakeReportId();
-  const access = createTempAccess(reportId, "telegram:1");
+  const importId = fakeImportId();
+  const access = createTempAccess(importId, "telegram:1");
   const result = checkTempAccess(access.token, access.password);
   assert.equal(result.ok, false);
   if (result.ok) throw new Error("unreachable");

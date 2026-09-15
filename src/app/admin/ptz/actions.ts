@@ -3,7 +3,7 @@
 import { isAuthenticated } from "@/lib/auth";
 import { addTelegramUser, removeTelegramUser, type TelegramRole } from "@/lib/ptz/telegramUsers";
 import { logAudit } from "@/lib/ptz/audit";
-import { reprocessReport } from "@/lib/ptz/importer";
+import { reprocessImport } from "@/lib/ptz/importer";
 
 export type PtzUserFormState = { error?: string };
 
@@ -31,7 +31,7 @@ export async function removePtzUser(telegramId: string): Promise<void> {
   logAudit("PTZ_USER_REMOVED", {}, { telegramId, via: "website-admin" });
 }
 
-export async function reprocessPtzReport(reportId: number): Promise<void> {
+export async function reprocessPtzReport(importId: number): Promise<void> {
   if (!(await isAuthenticated())) return;
-  await reprocessReport(reportId, { telegramId: "website-admin", username: null });
+  await reprocessImport(importId, { telegramId: "website-admin", username: null });
 }

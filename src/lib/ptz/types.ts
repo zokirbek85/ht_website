@@ -1,12 +1,6 @@
-// Shared types for the PTZ Analytics module.
-
-export const CONTRACT_TYPES = ["FUTURES", "FORWARD", "TEMPORARY_STORAGE"] as const;
-export type ContractType = (typeof CONTRACT_TYPES)[number];
-
-// A "series" is a metric group stored per farmer per report: one of the three
-// contract types, plus the two aggregate rows the source sheet also provides.
-export const SERIES = [...CONTRACT_TYPES, "TOTAL", "DELIVERED"] as const;
-export type Series = (typeof SERIES)[number];
+// Shared types for the Cotton Acceptance (Paxta qabuli) analytics module.
+// Replaces the old farmer-progress-snapshot ("Сводка") model entirely — see
+// docs/ptz-architecture.md for the 2026-09-15 decision and why.
 
 export type Severity = "INFO" | "WARNING" | "ERROR";
 
@@ -17,31 +11,72 @@ export type ImportWarning = {
   context?: Record<string, unknown>;
 };
 
-export type ParsedFarmerRow = {
-  region: string | null;
-  farmer: string;
-  metrics: Partial<Record<Series, SeriesValues>>;
-};
+/** One raw Excel row = one weighing/acceptance operation, after normalization. */
+export type ParsedOperationRow = {
+  rowNumber: number; // 1-based row number from the source sheet (for tracing back to Excel)
 
-export type SeriesValues = {
-  planQty?: number | null;
-  sourceDailyQty?: number | null;
-  sourceCumulativeQty?: number | null;
-  completionPct?: number | null;
-};
+  farmerName: string;
+  farmerInn: string | null;
+  farmerRegion: string | null;
+  farmerDistrict: string | null;
 
-export type ParsedReport = {
-  reportDate: string; // YYYY-MM-DD
-  dateDetectionMethod: "filename" | "sheet_content" | "upload_time";
-  sheetName: string;
-  rows: ParsedFarmerRow[];
-  warnings: ImportWarning[];
-  columnMap: ColumnMapping[];
-  // The sheet's own grand-total row (e.g. "Хаммаси"), if one was found — used
-  // as an independent cross-check against the sum of the parsed farmer rows,
-  // since that row is often a pasted number that goes stale as rows are
-  // added later and nobody updates it.
-  grandTotalFromSheet: Partial<Record<Series, SeriesValues>> | null;
+  contractType: string | null;
+  contractNumber: string | null;
+  contractQty: number | null; // in CONTRACT_QTY_UNIT (see config.ts), as read from the sheet
+
+  acceptanceDate: string | null; // YYYY-MM-DD, Asia/Tashkent
+  acceptanceRecordNo: string | null;
+
+  pk17Number: string | null;
+  pk17RegisteredAt: string | null; // ISO datetime, Asia/Tashkent
+  pk17SignedAt: string | null; // ISO datetime, null = not yet signed
+
+  batchNo: string | null;
+  plotType: string | null;
+  plotNo: string | null;
+
+  varietyDeclared: string | null;
+  generationDeclared: string | null;
+  industrialGradeDeclared: string | null;
+  classDeclared: string | null;
+
+  pickingMethod: string | null;
+
+  lab2hlNumber: string | null;
+  industrialGradeLab: string | null;
+  classLab: string | null;
+
+  grossKg: number | null;
+  tareKg: number | null;
+  physicalKg: number | null;
+  impurityPct: number | null;
+  calculatedKg: number | null;
+  moisturePct: number | null;
+  conditionedKg: number | null;
+
+  markup: number | null;
+  discount: number | null;
+  unitPrice: number | null;
+  amount: number | null;
+  transportFee: number | null;
+  seedCottonFee: number | null;
+  otherFeeTotal: number | null;
+
+  buyerName: string | null;
+  buyerInn: string | null;
+
+  preparationPointName: string | null;
+  preparationDistrict: string | null;
+  preparationRegion: string | null;
+
+  vehicleType: string | null;
+  vehiclePlate: string | null;
+  trailerCount: number | null;
+  trailerPlate: string | null;
+
+  clusterName: string | null;
+
+  identityKey: string; // dedup key (see config.ts / validation.ts)
 };
 
 export type ColumnMapping = {
@@ -51,9 +86,25 @@ export type ColumnMapping = {
   confidence: number;
 };
 
-export type ReportRecord = {
+export type GrandTotalCheck = Partial<Record<"physicalKg" | "conditionedKg" | "amount", number>>;
+
+export type ParsedReport = {
+  reportGeneratedAt: string | null; // ISO datetime parsed from the title banner, if found
+  dateDetectionMethod: "title_banner" | "max_acceptance_date" | "upload_time";
+  dataPeriodStart: string | null; // min acceptance date across parsed rows
+  dataPeriodEnd: string | null; // max acceptance date across parsed rows
+  sheetName: string;
+  rows: ParsedOperationRow[];
+  warnings: ImportWarning[];
+  columnMap: ColumnMapping[];
+  grandTotalFromSheet: GrandTotalCheck | null;
+};
+
+export type ImportRecord = {
   id: number;
-  reportDate: string;
+  reportGeneratedAt: string | null;
+  dataPeriodStart: string | null;
+  dataPeriodEnd: string | null;
   sourceFilename: string;
   sourceHash: string;
   importedAt: string;
@@ -62,40 +113,25 @@ export type ReportRecord = {
   status: "success" | "partial" | "failed";
   parserVersion: string;
   schemaVersion: string;
-  dateDetectionMethod: string;
   isActive: number;
+  rowCount: number;
+  validRowCount: number;
+  invalidRowCount: number;
   warningCount: number;
   errorCount: number;
   rawFilePath: string | null;
 };
 
-export type FarmerMetricRow = {
-  reportId: number;
-  farmerId: number;
-  farmerName: string;
-  regionName: string | null;
-  series: Series;
-  planQty: number | null;
-  sourceDailyQty: number | null;
-  sourceCumulativeQty: number | null;
-  calculatedDailyDelta: number | null;
-  completionPct: number | null;
-};
+export type ContractStatus = "NOT_STARTED" | "IN_PROGRESS" | "NEAR_COMPLETION" | "COMPLETED" | "OVER_CONTRACT";
 
-export type ForecastStatus = "GREEN" | "YELLOW" | "RED" | "UNKNOWN";
+export type AlertSeverity = "RED" | "YELLOW" | "GREEN" | "INFO";
 
-export type SeriesAnalytics = {
-  series: Series;
-  planQty: number;
-  cumulativeQty: number;
-  dailyQty: number;
-  previousDailyQty: number | null;
-  growthPct: number | null;
-  completionPct: number | null;
-  remainingQty: number;
-  currentRunRate: number | null;
-  requiredDailyRate: number | null;
-  forecastDate: string | null;
-  status: ForecastStatus;
-  isBaseline: boolean;
+export type Alert = {
+  category: "CONTRACT" | "DATA" | "QUALITY";
+  code: string;
+  severity: AlertSeverity;
+  title: string;
+  count: number;
+  details: string;
+  sampleRecords: string[]; // human-readable identifiers (farmer / contract / PK-17), capped
 };

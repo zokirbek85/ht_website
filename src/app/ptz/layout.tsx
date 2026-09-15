@@ -3,7 +3,7 @@ import { oswald, ptSans, plexMono } from "@/lib/fonts";
 import "../globals.css";
 
 export const metadata: Metadata = {
-  title: "PTZ Analytics | Hazorasp-Textil",
+  title: "Пахта Қабули Аналитикаси | Hazorasp-Textil",
   robots: { index: false, follow: false },
   icons: {
     icon: [

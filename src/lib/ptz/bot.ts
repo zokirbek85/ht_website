@@ -1,106 +1,106 @@
 import { logAudit } from "./audit.ts";
-import { importExcelReport, reprocessReport } from "./importer.ts";
-import { generatePdfReport } from "./pdf.ts";
-import { buildReportBundle, type ReportBundle } from "./reportBundle.ts";
+import { importExcelReport, reprocessImport } from "./importer.ts";
+import { generateReportPackage, buildReportBundle } from "./reportBundle.ts";
 import { downloadTelegramFile, sendDocument, sendMessage, type TelegramUpdate } from "./telegram.ts";
-import { createTempAccess } from "./tempAccess.ts";
-import { getLatestActiveReport, listActiveReports } from "./analytics.ts";
+import { getActiveImport, listAllImports } from "./analytics.ts";
 import { addTelegramUser, getAuthorizedUser, isAdmin, listTelegramUsers, removeTelegramUser } from "./telegramUsers.ts";
 import { getAllSettings } from "./settings.ts";
-
-const STATUS_LABEL_UZ: Record<string, string> = {
-  GREEN: "🟢 РЕЖА БЎЙИЧА",
-  YELLOW: "🟡 ХАВФ ОСТИДА",
-  RED: "🔴 РЕЖАДАН ОРТДА",
-  UNKNOWN: "⚪ МАЪЛУМОТ ЕТАРЛИ ЭМАС"
-};
+import type { ReportBundle } from "./reportBundle.ts";
 
 function fmt(n: number | null | undefined, decimals = 1): string {
   if (n == null || Number.isNaN(n)) return "—";
   return n.toLocaleString("ru-RU", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
-
+function fmtTons(kg: number | null | undefined): string {
+  return `${fmt((kg ?? 0) / 1000)} т`;
+}
+function fmtSum(n: number | null | undefined): string {
+  if (n == null) return "—";
+  return `${Math.round(n).toLocaleString("ru-RU")} сўм`;
+}
 function fmtDate(iso: string | null): string {
   if (!iso) return "—";
-  const [y, m, d] = iso.split("-");
-  return `${d}.${m}.${y}`;
+  return iso.slice(0, 10).split("-").reverse().join(".");
 }
 
 function siteUrl(): string {
   return process.env.NEXT_PUBLIC_SITE_URL ?? "https://hazorasp-textil.uz";
 }
 
-function summaryText(bundle: ReportBundle): string {
-  const growthPct =
-    bundle.previousDailyQty && bundle.previousDailyQty !== 0
-      ? ((bundle.overall.dailyQty - bundle.previousDailyQty) / bundle.previousDailyQty) * 100
-      : null;
+function finalSummaryText(bundle: ReportBundle): string {
+  const s = bundle.summary;
+  const red = bundle.alerts.filter((a) => a.severity === "RED").reduce((a, al) => a + al.count, 0);
+  const yellow = bundle.alerts.filter((a) => a.severity === "YELLOW").reduce((a, al) => a + al.count, 0);
+  const green = bundle.alerts.filter((a) => a.severity === "GREEN" || a.severity === "INFO").reduce((a, al) => a + al.count, 0);
 
   return [
-    "📊 PTZ SVODKA",
-    `📅 ${fmtDate(bundle.report.reportDate)}`,
+    "✅ ПАХТА ҚАБУЛИ ҲИСОБОТИ ТАЙЁР",
     "",
-    `Умумий режа: ${fmt(bundle.overall.planQty)} т`,
-    `Жами қабул: ${fmt(bundle.overall.cumulativeQty)} т`,
-    `Бажарилиши: ${fmt(bundle.forecast.completionPct)}%`,
+    `📋 Шартнома миқдори:  ${fmtTons(s.contractQtyKg)}`,
+    `🌿 Қабул қилинган:     ${fmtTons(s.acceptedKg)}`,
+    `📌 Қолдиқ:             ${fmtTons(s.remainingKg)}`,
+    `📈 Бажарилиши:         ${s.achievementPct != null ? `${fmt(s.achievementPct)}%` : "—"}`,
     "",
-    `Бугунги қабул: ${fmt(bundle.overall.dailyQty)} т`,
-    `Кечаги қабул: ${fmt(bundle.previousDailyQty)} т`,
-    `Ўсиш: ${growthPct != null ? `${growthPct >= 0 ? "+" : ""}${fmt(growthPct)}%` : "—"}`,
+    `🚛 Қабул операциялари: ${s.operationCount}`,
+    `👨‍🌾 Фермерлар: ${s.farmerCount}`,
+    `📑 Шартномалар: ${s.contractCount}`,
     "",
-    `Қолдиқ: ${fmt(bundle.forecast.remainingQty)} т`,
-    `Керакли темп: ${fmt(bundle.forecast.requiredDailyRate)} т/кун`,
-    `Амалдаги темп: ${fmt(bundle.forecast.currentRunRate)} т/кун`,
+    "💰 Харид суммаси:",
+    fmtSum(s.totalAmount),
     "",
-    `Прогноз: ${fmtDate(bundle.forecast.forecastDate)}`,
-    `Ҳолат: ${STATUS_LABEL_UZ[bundle.forecast.status]}`
+    "📊 Ўртача харид нархи:",
+    s.weightedAvgPrice != null ? `${fmt(s.weightedAvgPrice, 0)} сўм/кг` : "—",
+    "",
+    "⚠️ Назорат:",
+    `🔴 ${red} та   🟡 ${yellow} та   🟢 ${green} та`,
+    "",
+    `📅 Ҳисобот санаси: ${fmtDate(bundle.import.reportGeneratedAt)}`,
+    `Маълумот даври: ${fmtDate(bundle.import.dataPeriodStart)} — ${fmtDate(bundle.import.dataPeriodEnd)}`
   ].join("\n");
 }
 
-async function sendReportPackage(chatId: number, telegramId: string, bundle: ReportBundle): Promise<void> {
-  await sendMessage(chatId, "📄 PDF tayyorlanmoqda...");
-  const pdfBuffer = await generatePdfReport({
-    report: bundle.report,
-    overall: bundle.overall,
-    previousDailyQty: bundle.previousDailyQty,
-    forecast: bundle.forecast,
-    contractTypes: bundle.contractTypes,
-    topRegions: bundle.topRegions,
-    bottomRegions: bundle.bottomRegions,
-    topFarmers: bundle.topFarmers,
-    bottomFarmers: bundle.bottomFarmers,
-    riskFarmers: bundle.riskFarmers,
-    warningMessages: bundle.warningMessages
-  });
+function todayShortSummary(bundle: ReportBundle): string {
+  const s = bundle.summary;
+  return [
+    "📊 ПАХТА ҚАБУЛИ — ҚИСҚА ХУЛОСА",
+    `📅 ${fmtDate(bundle.import.reportGeneratedAt)}`,
+    "",
+    `Шартнома: ${fmtTons(s.contractQtyKg)}`,
+    `Қабул: ${fmtTons(s.acceptedKg)}  (${s.achievementPct != null ? `${fmt(s.achievementPct)}%` : "—"})`,
+    `Бугунги қабул: ${fmtTons(s.todayAcceptedKg)}`,
+    `Қолдиқ: ${fmtTons(s.remainingKg)}`
+  ].join("\n");
+}
 
-  const access = createTempAccess(bundle.report.id, `telegram:${telegramId}`);
-  const link = `${siteUrl()}/ptz/report/${access.token}`;
+async function sendReportPackage(chatId: number, telegramId: string, importId: number): Promise<void> {
+  await sendMessage(chatId, "📄 PDF тайёрланмоқда...\n📊 XLSX тайёрланмоқда...\n🌐 Web Dashboard тайёрланмоқда...");
 
-  await sendMessage(chatId, summaryText(bundle));
-  await sendDocument(
-    chatId,
-    pdfBuffer,
-    `HAZORASP-TEXTIL_PTZ_${bundle.report.reportDate}.pdf`,
-    "✅ Hisobot tayyor."
-  );
-  await sendMessage(
-    chatId,
-    ["📊 PTZ DASHBOARD", "", "🔗 Link:", link, "", "🔐 Парол:", access.password, "", "⏳ Амал қилиш муддати:", "1 соат"].join("\n")
-  );
+  const pkg = await generateReportPackage(importId, siteUrl(), `telegram:${telegramId}`);
+  if (!pkg) {
+    await sendMessage(chatId, "❌ Ҳисоботни тайёрлашда кутилмаган хато юз берди.");
+    return;
+  }
 
-  logAudit("DASHBOARD_LINK_SENT", { telegramId }, { reportId: bundle.report.id, expiresAt: access.expiresAt });
+  await sendMessage(chatId, finalSummaryText(pkg.bundle), [
+    [{ text: "🌐 WEB DASHBOARD", url: pkg.webUrl }]
+  ]);
+  await sendMessage(chatId, ["🔐 Dashboard пароли:", pkg.webPassword, "⏳ Амал қилиш муддати: 1 соат"].join("\n"));
+  await sendDocument(chatId, pkg.pdf, `Hazorasp_Textil_Paxta_Qabuli_Report_${pkg.bundle.import.dataPeriodEnd ?? "report"}.pdf`, "📄 PDF ҲИСОБОТ");
+  await sendDocument(chatId, pkg.xlsx, `Hazorasp_Textil_Paxta_Qabuli_Report_${pkg.bundle.import.dataPeriodEnd ?? "report"}.xlsx`, "📊 XLSX ҲИСОБОТ");
+
+  logAudit("REPORT_PACKAGE_SENT", { telegramId }, { importId });
 }
 
 const HELP_TEXT = [
-  "PTZ Analytics bot buyruqlari:",
-  "/report — oxirgi hisobotni qayta yuborish",
-  "/today — bugungi qisqa xulosa",
-  "/history — so'nggi hisobotlar ro'yxati",
-  "/dashboard — yangi vaqtinchalik dashboard havolasi",
-  "/reprocess — oxirgi hisobotni saqlangan asl fayldan qayta tahlil qilish (faqat admin, parser yangilanganda foydali)",
-  "/settings — joriy sozlamalar (faqat admin)",
+  "Пахта қабули аналитика боти буйруқлари:",
+  "/report — охирги ҳисоботни қайта юбориш",
+  "/today — бугунги қисқа хулоса",
+  "/history — сўнгги импортлар рўйхати",
+  "/dashboard — янги вақтинчалик dashboard ҳаволаси",
+  "/reprocess — охирги импортни сақланган асл файлдан қайта таҳлил қилиш (фақат админ)",
+  "/settings — жорий созламалар (фақат админ)",
   "",
-  "Excel faylni shu botga yuborsangiz, avtomatik tahlil qilinadi."
+  "Excel файлни шу ботга юборсангиз, автоматик таҳлил қилинади."
 ].join("\n");
 
 async function handleDocument(
@@ -116,38 +116,31 @@ async function handleDocument(
     document.mime_type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
   if (!isXlsx) {
-    await sendMessage(chatId, "❌ Faqat .xlsx formatidagi fayllar qabul qilinadi.");
+    await sendMessage(chatId, "❌ Фақат .xlsx форматидаги файллар қабул қилинади.");
     return;
   }
   if ((document.file_size ?? 0) > 20 * 1024 * 1024) {
-    await sendMessage(chatId, "❌ Fayl hajmi 20MB dan katta. Telegram bot API bunday faylni yuklab bera olmaydi.");
+    await sendMessage(chatId, "❌ Файл ҳажми 20MB дан катта. Telegram bot API бундай файлни юклаб бера олмайди.");
     return;
   }
 
-  await sendMessage(chatId, "📥 Fayl qabul qilindi");
-  await sendMessage(chatId, "🔍 Excel strukturasi tahlil qilinmoqda...");
+  await sendMessage(chatId, "📊 Файл қабул қилинди.\n\nМаълумотлар текширилмоқда...");
 
   let buffer: Buffer;
   try {
     buffer = await downloadTelegramFile(document.file_id);
   } catch (err) {
-    await sendMessage(chatId, "❌ Faylni yuklab olishda xato yuz berdi.");
+    await sendMessage(chatId, "❌ Файлни юклаб олишда хато юз берди.");
     console.error("PTZ bot: file download failed", err);
     return;
   }
 
-  await sendMessage(chatId, "📊 Ma'lumotlar qayta ishlanmoqda...");
+  await sendMessage(chatId, "🔄 Excel таҳлил қилинмоқда...\n📈 Кўрсаткичлар ҳисобланмоқда...");
 
-  const outcome = await importExcelReport(buffer, filename, new Date(messageDate * 1000), {
-    telegramId,
-    username
-  });
+  const outcome = await importExcelReport(buffer, filename, new Date(messageDate * 1000), { telegramId, username });
 
   if (outcome.status === "duplicate") {
-    await sendMessage(
-      chatId,
-      `ℹ️ Bu fayl allaqachon ${outcome.reportDate} sanasi uchun yuklangan. Qayta ishlanmadi.`
-    );
+    await sendMessage(chatId, "ℹ️ Бу файл аллақачон юкланган (байт-байтгача бир хил). Қайта ишланмади.");
     return;
   }
 
@@ -156,17 +149,12 @@ async function handleDocument(
     await sendMessage(
       chatId,
       [
-        "❌ Faylni qayta ishlashda xato.",
+        "❌ Ҳисобот яратишда хатолик юз берди.",
+        "",
+        "Муаммо:",
         ...errors.slice(0, 5).map((e) => `• ${e.message}`)
       ].join("\n")
     );
-    return;
-  }
-
-  await sendMessage(chatId, "📈 Analitika hisoblanmoqda...");
-  const bundle = buildReportBundle(outcome.reportId);
-  if (!bundle) {
-    await sendMessage(chatId, "❌ Hisobot tayyorlashda kutilmagan xato yuz berdi.");
     return;
   }
 
@@ -175,19 +163,14 @@ async function handleDocument(
     const warns = outcome.warnings.filter((w) => w.severity === "WARNING").length;
     await sendMessage(
       chatId,
-      `⚠️ Import qisman muvaffaqiyatli yakunlandi (${errors} xato, ${warns} ogohlantirish). Tekshirilgan ma'lumotlar bilan davom etilmoqda.`
+      `⚠️ Импорт қисман муваффақиятли якунланди (${errors} хато, ${warns} огоҳлантириш). Текширилган маълумотлар билан давом этилмоқда.\n\nҚаторлар: ${outcome.rowCount} (яроқли: ${outcome.validRowCount})`
     );
   }
 
-  await sendReportPackage(chatId, telegramId, bundle);
+  await sendReportPackage(chatId, telegramId, outcome.importId);
 }
 
-async function handleCommand(
-  chatId: number,
-  telegramId: string,
-  role: "admin" | "uploader",
-  command: string
-): Promise<void> {
+async function handleCommand(chatId: number, telegramId: string, role: "admin" | "uploader", command: string): Promise<void> {
   const base = command.split(/[@\s]/)[0];
 
   switch (base) {
@@ -197,108 +180,89 @@ async function handleCommand(
       return;
 
     case "/report": {
-      const latest = getLatestActiveReport();
+      const latest = getActiveImport();
       if (!latest) {
-        await sendMessage(chatId, "Hozircha hech qanday hisobot yuklanmagan.");
+        await sendMessage(chatId, "Ҳозирча ҳеч қандай ҳисобот юкланмаган.");
         return;
       }
-      const bundle = buildReportBundle(latest.id);
-      if (bundle) await sendReportPackage(chatId, telegramId, bundle);
+      await sendReportPackage(chatId, telegramId, latest.id);
       return;
     }
 
     case "/today": {
-      const latest = getLatestActiveReport();
+      const latest = getActiveImport();
       if (!latest) {
-        await sendMessage(chatId, "Hozircha hech qanday hisobot yuklanmagan.");
+        await sendMessage(chatId, "Ҳозирча ҳеч қандай ҳисобот юкланмаган.");
         return;
       }
       const bundle = buildReportBundle(latest.id);
-      if (bundle) await sendMessage(chatId, summaryText(bundle));
+      if (bundle) await sendMessage(chatId, todayShortSummary(bundle));
       return;
     }
 
     case "/history": {
-      const reports = listActiveReports().slice(-10).reverse();
-      if (reports.length === 0) {
-        await sendMessage(chatId, "Tarix bo'sh.");
+      const imports = listAllImports(10);
+      if (imports.length === 0) {
+        await sendMessage(chatId, "Тарих бўш.");
         return;
       }
-      const lines = reports.map((r) => `${fmtDate(r.reportDate)} — ${r.status} (${r.warningCount} ogohlantirish)`);
-      await sendMessage(chatId, ["So'nggi hisobotlar:", ...lines].join("\n"));
+      const lines = imports.map((i) => `${fmtDate(i.dataPeriodEnd)} — ${i.status} (${i.rowCount} қатор, ${i.warningCount} огоҳлантириш)${i.isActive ? " [фаол]" : ""}`);
+      await sendMessage(chatId, ["Сўнгги импортлар:", ...lines].join("\n"));
       return;
     }
 
     case "/dashboard": {
-      const latest = getLatestActiveReport();
+      const latest = getActiveImport();
       if (!latest) {
-        await sendMessage(chatId, "Hozircha hech qanday hisobot yuklanmagan.");
+        await sendMessage(chatId, "Ҳозирча ҳеч қандай ҳисобот юкланмаган.");
         return;
       }
+      const { createTempAccess } = await import("./tempAccess.ts");
       const access = createTempAccess(latest.id, `telegram:${telegramId}`);
       const link = `${siteUrl()}/ptz/report/${access.token}`;
-      await sendMessage(
-        chatId,
-        ["📊 PTZ DASHBOARD", "", "🔗 Link:", link, "", "🔐 Парол:", access.password, "", "⏳ Амал қилиш муддати:", "1 соат"].join(
-          "\n"
-        )
-      );
+      await sendMessage(chatId, ["📊 PAXTA QABULI DASHBOARD", "", "🔐 Парол:", access.password, "", "⏳ Амал қилиш муддати:", "1 соат"].join("\n"), [
+        [{ text: "🌐 Dashboardni ochish", url: link }]
+      ]);
       return;
     }
 
     case "/reprocess": {
       if (role !== "admin") {
-        await sendMessage(chatId, "❌ Bu buyruq faqat administratorlar uchun.");
+        await sendMessage(chatId, "❌ Бу буйруқ фақат администраторлар учун.");
         return;
       }
-      const latest = getLatestActiveReport();
+      const latest = getActiveImport();
       if (!latest) {
-        await sendMessage(chatId, "Hozircha hech qanday hisobot yuklanmagan.");
+        await sendMessage(chatId, "Ҳозирча ҳеч қандай ҳисобот юкланмаган.");
         return;
       }
-      await sendMessage(chatId, "🔄 Hisobot saqlangan asl fayldan qayta tahlil qilinmoqda...");
-      const outcome = await reprocessReport(latest.id, { telegramId, username: null });
+      await sendMessage(chatId, "🔄 Ҳисобот сақланган асл файлдан қайта таҳлил қилинмоқда...");
+      const outcome = await reprocessImport(latest.id, { telegramId, username: null });
       if (outcome.status === "failed") {
-        await sendMessage(
-          chatId,
-          ["❌ Qayta tahlil qilib bo'lmadi.", ...outcome.warnings.slice(0, 5).map((w) => `• ${w.message}`)].join("\n")
-        );
+        await sendMessage(chatId, ["❌ Қайта таҳлил қилиб бўлмади.", ...outcome.warnings.slice(0, 5).map((w) => `• ${w.message}`)].join("\n"));
         return;
       }
-      const bundle = buildReportBundle(outcome.reportId);
-      if (!bundle) {
-        await sendMessage(chatId, "❌ Qayta tahlildan so'ng hisobotni tayyorlashda xato yuz berdi.");
-        return;
-      }
-      await sendMessage(
-        chatId,
-        `✅ Qayta tahlil tugadi: ${outcome.farmerCount} fermer, ${outcome.warnings.length} ogohlantirish.`
-      );
-      await sendReportPackage(chatId, telegramId, bundle);
+      await sendMessage(chatId, `✅ Қайта таҳлил тугади: ${outcome.rowCount} қатор, ${outcome.warnings.length} огоҳлантириш.`);
+      await sendReportPackage(chatId, telegramId, outcome.importId);
       return;
     }
 
     case "/settings": {
       if (role !== "admin") {
-        await sendMessage(chatId, "❌ Bu buyruq faqat administratorlar uchun.");
+        await sendMessage(chatId, "❌ Бу буйруқ фақат администраторлар учун.");
         return;
       }
       const settings = getAllSettings();
       const users = listTelegramUsers();
       await sendMessage(
         chatId,
-        [
-          "Joriy sozlamalar:",
-          ...Object.entries(settings).map(([k, v]) => `${k} = ${v}`),
-          "",
-          `Ruxsat berilgan foydalanuvchilar: ${users.length}`
-        ].join("\n")
+        ["Жорий созламалар:", ...Object.entries(settings).map(([k, v]) => `${k} = ${v}`), "", `Рухсат берилган фойдаланувчилар: ${users.length}`].join("\n")
       );
       return;
     }
 
     default:
-      await sendMessage(chatId, "Noma'lum buyruq. /help ni sinab ko'ring.");
+      await sendMessage(chatId, "Номаълум буйруқ. /help ни синаб кўринг.");
   }
 }
 
@@ -313,10 +277,7 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void
   const user = getAuthorizedUser(telegramId);
   if (!user) {
     logAudit("UNAUTHORIZED_ACCESS_ATTEMPT", { telegramId, username }, { text: message.text ?? "[document]" });
-    await sendMessage(
-      chatId,
-      "⛔ Sizda ushbu botdan foydalanish huquqi yo'q. Administrator bilan bog'laning."
-    );
+    await sendMessage(chatId, "⛔ Сизда ушбу ботдан фойдаланиш ҳуқуқи йўқ. Администратор билан боғланинг.");
     return;
   }
 

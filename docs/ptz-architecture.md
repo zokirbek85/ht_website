@@ -146,3 +146,84 @@ first few real imports.
 
 See `DEPLOY.md` → "PTZ Analytics setup" for the environment variables, Node version requirement, and
 one-time webhook registration (`npm run ptz:set-webhook`).
+
+## 9. 2026-09-15 rewrite: cotton acceptance ledger model
+
+The MVP above (§1-8) was built and validated against the "Сводка" (summary) file: one row per farmer per
+snapshot date, pre-aggregated into Plan/Daily/Cumulative figures per contract type
+(Futures/Forward/Temporary-Storage). On 2026-09-15 the client's actual operational export was reviewed
+(`basket_HAZORASP-TEXTIL MCHJ.xlsx`) and turned out to be a **structurally different file**: one row per
+truck-weighing operation (identified by a ПК-17 document), ~47 raw columns — weighbridge weights, quality
+lab results, contract linkage, pricing, transport — not a pre-aggregated summary. The client confirmed this
+ledger, not the Сводка, is the system of record going forward, so **the Сводка/contract-type-zone model was
+replaced outright**, not extended. This section documents that replacement; §1-7 above describe the
+superseded MVP for history.
+
+### What changed and why
+
+| Decision | Choice | Why |
+|---|---|---|
+| Data model | One row per acceptance *operation* (`operations` table), not one row per farmer per snapshot | Matches the real file 1:1 — "1 Excel row = 1 weighing" — and lets every other cut (by farmer, contract, cluster, day, quality) be computed from one dataset instead of trusting a pre-aggregated number. |
+| "Plan" | `REJA = Шартнома миқдори` (contract quantity), read per-row and deduplicated by contract number | The client confirmed there is no separate plan table — the spec's original assumption. |
+| Import semantics | Each upload is treated as a **full replacement of the current snapshot** (`is_active` flips per whole import, not per date) | Verified against the real file: it already contains the full season's operations so far (rows spanning 5 different acceptance dates in one export), not a daily delta. This also means the daily trend chart no longer needs day-over-day imports — one import's rows already carry per-row acceptance dates to group by. |
+| Reporting weight | `REPORTING_WEIGHT_FIELD = "conditionedKg"` (Кондицион вазни) | Confirmed with the client, and independently verified: the file's own "Суммаси" (amount) column equals `conditionedKg × unitPrice` exactly (checked against the real sample row-by-row), so conditioned weight is what the business already settles on. Configurable in `config.ts`. |
+| Contract-quantity unit | Assumed **tons** — `CONTRACT_QTY_TO_KG = 1000` | The "Шартнома миқдори" column carries no unit in the header, unlike every weight column below it. Value magnitudes (hundreds per contract) are consistent with tons for a season contract, not kg. **Not confirmed** — flagged in every generated report's methodology section and changeable in one place (`config.ts`). |
+| Quality thresholds | Placeholder values, `QUALITY_THRESHOLDS_CONFIGURED = false` | No normative moisture/impurity limits exist in the source file or from the client. Every quality "status" in a report is explicitly marked provisional until real thresholds are supplied. |
+| Column mapping | Exact-text lookup (`excel-mapping.ts`), not keyword/substring fuzzy matching | This source is a fixed-vocabulary ERP export (same two header rows every time), and several leaf labels legitimately repeat under different zones ("Саноат нави"/"Синфи" under both "Пахтанинг тури" and "Лаборатория хулосаси"; "Вилояти" vs "Вилоят" for farmer vs. preparation-point location) — substring matching would cross-map them. |
+| ПК-17 sub-columns | Mapped **positionally**, not by their row-6 label | Verified against the real file: the row-6 sub-labels for this zone read "Кластер"/"Фермер" but both columns actually hold timestamps (registration, then signing time) — a stale label left over from a different template revision. `parser.ts` ignores that text and uses column order within the zone instead. |
+| Grand-total row | Its "ЖАМИ:" label sits in the **row-number column**, not the farmer-name column | Also only discovered by parsing the real file — differs from where the old Сводка parser's grand-total label lived. |
+
+### New schema (`db.ts`, `SCHEMA_VERSION = "2.0.0"`)
+
+`imports` (was `reports`) · `farmers` (now keyed by INN when present) · `contracts` (one row per contract
+number, holding its quantity and type) · `clusters` / `buyers` / `preparation_points` (dimension tables) ·
+`operations` (one row per acceptance operation, `is_duplicate` and `is_valid` flags computed at import time,
+never silently dropped) · `import_warnings` · `telegram_users` / `audit_log` / `temp_access(_log)` / `settings`
+carried over unchanged. `getDb()` runs a **one-time migration** that drops the old `farmer_metrics` /
+old-shape `farmers` / `regions` / `reports` tables the first time it sees them (detected via
+`farmer_metrics` existing) — safe because no production history existed in the old schema at the time of
+this rewrite (confirmed via the `ptz:reset` script run immediately before).
+
+### Central analytics engine (`analytics.ts`)
+
+`CottonAcceptanceAnalytics` loads one import's operations once and computes `summary()`, `contracts()`,
+`farmers()`, `clusters()`, `quality()`, `finance()`, `weightBridge()`, `dailyTrend()`, `controls()` — the PDF
+(`reports/pdf.ts`), XLSX (`reports/xlsx.ts`) and web dashboard (`components/ptz/Dashboard.tsx`) all consume
+the same `ReportBundle` (`reportBundle.ts`), so the three outputs can never disagree on a number. Weighted
+average price = `SUM(amount) / SUM(conditionedKg)` (`PRICE_WEIGHT_BASIS` in `config.ts`), not a plain
+average.
+
+### Reports
+
+- **PDF** (`reports/pdf.ts`): 10 sections — executive summary, contract performance, acceptance dynamics
+  (with a daily bar chart), farmer ranking, cluster analysis, quality, finance, weight bridge, control
+  center, methodology/assumptions. Same brand styling as the original MVP PDF.
+- **XLSX** (`reports/xlsx.ts`, new): 10-sheet analytical workbook (`01_Summary` … `10_Data_Dictionary`) via
+  ExcelJS — frozen panes, autofilters, percentage/currency number formats, conditional traffic-light fill on
+  achievement %, and a data dictionary sheet spelling out every formula and assumption.
+- **Web dashboard** (`components/ptz/Dashboard.tsx`): three tabs — Рахбарият (management KPIs, trend,
+  contract/farmer/cluster tables), Операцион (filterable raw-operation drill-down table), Назорат маркази
+  (control-center alerts by category/severity).
+
+### Telegram bot (`bot.ts`)
+
+Same authorization/webhook plumbing as the MVP. Final message format follows the new KPI set (contract
+qty/accepted/remaining/achievement, operations/farmers/contracts counts, purchase amount, weighted average
+price, red/yellow/green alert counts); PDF and XLSX are sent as documents (Telegram has no way to make a
+locally-generated file clickable without a public URL), and the web dashboard link is sent as an inline URL
+button.
+
+### Testing
+
+`__tests__/ptz/fixtures.mts` builds a synthetic ledger workbook that reproduces the real file's exact
+structure and every quirk discovered above (wide title banner containing the word "фермер", mislabeled
+ПК-17 sub-headers, grand-total label in the row-number column) — not the old Сводка shape. Parser, importer
+(dedup / full-snapshot-replace / reprocess / grand-total consistency), analytics engine, and identity-key
+tests all run against it or against synthetic `OperationEntity[]` fixtures (`npm test`).
+
+### Still deliberately deferred
+
+Same caveats as §5 apply (no LLM mapping fallback, single-process SQLite, no settings-editing UI). Also
+carried over from this rewrite: quality thresholds and the contract-quantity unit are unconfirmed
+assumptions (see table above) — do not silently "fix" them without checking with the client first; the
+generated reports already say so explicitly, which is the intended behavior, not a bug to clean up.

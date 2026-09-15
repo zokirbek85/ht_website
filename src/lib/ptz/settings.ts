@@ -1,4 +1,5 @@
 import { getDb } from "./db.ts";
+import { defaultSeasonDeadline } from "./config.ts";
 
 export function getSetting(key: string): string | null {
   const row = getDb().prepare("SELECT value FROM settings WHERE key = ?").get(key) as
@@ -28,11 +29,7 @@ export function getAllSettings(): Record<string, string> {
 export function getSeasonDeadline(reportYear: number): string {
   const configured = getSetting("season_deadline");
   if (configured) return configured;
-  return `${reportYear}-12-31`;
-}
-
-export function getForecastWindowDays(): number {
-  return getNumberSetting("forecast_window_days", 7);
+  return defaultSeasonDeadline(reportYear);
 }
 
 export function getTempLinkTtlMinutes(): number {
