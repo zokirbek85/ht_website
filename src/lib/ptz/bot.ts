@@ -1,294 +1,280 @@
+// PTZ Telegram bot — Кунлик терим flow. Handlers only receive files,
+// classify them, manage the user's upload session, call the report service
+// and send results; all parsing/matching/calculation lives in ./kunlik/.
+//
+// The single-file "Пахта қабули" package was removed from Telegram on
+// 2026-09-23 (the business chose the 4-file Кунлик терим report instead);
+// its library code still backs /admin/ptz and the web dashboard.
 import { logAudit } from "./audit.ts";
-import { importExcelReport, reprocessImport } from "./importer.ts";
-import { generateReportPackage, buildReportBundle } from "./reportBundle.ts";
-import { downloadTelegramFile, sendDocument, sendMessage, type TelegramUpdate } from "./telegram.ts";
-import { getActiveImport, listAllImports } from "./analytics.ts";
-import { addTelegramUser, getAuthorizedUser, isAdmin, listTelegramUsers, removeTelegramUser } from "./telegramUsers.ts";
+import { answerCallbackQuery, downloadTelegramFile, editMessageText, sendDocument, sendMessage, type InlineKeyboardButton, type TelegramUpdate } from "./telegram.ts";
+import { addTelegramUser, getAuthorizedUser, isAdmin, removeTelegramUser, listTelegramUsers } from "./telegramUsers.ts";
 import { getAllSettings } from "./settings.ts";
-import type { ReportBundle } from "./reportBundle.ts";
+import { classifyFile, SOURCE_LABELS } from "./kunlik/classifier.ts";
+import { MAX_UPLOAD_BYTES } from "./kunlik/config.ts";
+import { buildLatestReport, processBatch, type ReportOutput } from "./kunlik/service.ts";
+import { currentFiles, latestCompletedBatch } from "./kunlik/repository.ts";
+import { getRefreshIntervalMinutes, setRefreshIntervalMinutes } from "./kunlik/refresh.ts";
+import {
+  addFile,
+  claimForProcessing,
+  cleanupExpiredSessions,
+  finishSession,
+  getOpenSession,
+  getOrStartSession,
+  isComplete,
+  isProcessing,
+  reopenWithout,
+  resolvePending,
+  sessionInputFiles,
+  setPending,
+  startSession,
+  type UploadSession
+} from "./kunlik/session.ts";
+import * as V from "./kunlik/telegramViews.ts";
+import { SOURCE_TYPES, UserFacingError, type SourceType } from "./kunlik/types.ts";
 
-function fmt(n: number | null | undefined, decimals = 1): string {
-  if (n == null || Number.isNaN(n)) return "—";
-  return n.toLocaleString("ru-RU", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-}
-function fmtTons(kg: number | null | undefined): string {
-  return `${fmt((kg ?? 0) / 1000)} т`;
-}
-function fmtSum(n: number | null | undefined): string {
-  if (n == null) return "—";
-  return `${Math.round(n).toLocaleString("ru-RU")} сўм`;
-}
-function fmtDate(iso: string | null): string {
-  if (!iso) return "—";
-  return iso.slice(0, 10).split("-").reverse().join(".");
-}
+type Chat = { chatId: number; telegramId: string; username: string | null };
 
-function siteUrl(): string {
-  return process.env.NEXT_PUBLIC_SITE_URL ?? "https://hazorasp-textil.uz";
-}
+const TYPE_BUTTONS: InlineKeyboardButton[][] = SOURCE_TYPES.map((t) => [{ text: SOURCE_LABELS[t], callback_data: `kt:type:${t}` }]);
+const RESULT_BUTTONS: InlineKeyboardButton[][] = [[{ text: "🔎 Батафсил", callback_data: "kt:detail" }]];
 
-function finalSummaryText(bundle: ReportBundle): string {
-  const s = bundle.summary;
-  const red = bundle.alerts.filter((a) => a.severity === "RED").reduce((a, al) => a + al.count, 0);
-  const yellow = bundle.alerts.filter((a) => a.severity === "YELLOW").reduce((a, al) => a + al.count, 0);
-  const green = bundle.alerts.filter((a) => a.severity === "GREEN" || a.severity === "INFO").reduce((a, al) => a + al.count, 0);
-
-  return [
-    "✅ ПАХТА ҚАБУЛИ ҲИСОБОТИ ТАЙЁР",
-    "",
-    `📋 Шартнома миқдори:  ${fmtTons(s.contractQtyKg)}`,
-    `🌿 Қабул қилинган:     ${fmtTons(s.acceptedKg)}`,
-    `📌 Қолдиқ:             ${fmtTons(s.remainingKg)}`,
-    `📈 Бажарилиши:         ${s.achievementPct != null ? `${fmt(s.achievementPct)}%` : "—"}`,
-    "",
-    `🚛 Қабул операциялари: ${s.operationCount}`,
-    `👨‍🌾 Фермерлар: ${s.farmerCount}`,
-    `📑 Шартномалар: ${s.contractCount}`,
-    "",
-    "💰 Харид суммаси:",
-    fmtSum(s.totalAmount),
-    "",
-    "📊 Ўртача харид нархи:",
-    s.weightedAvgPrice != null ? `${fmt(s.weightedAvgPrice, 0)} сўм/кг` : "—",
-    "",
-    "⚠️ Назорат:",
-    `🔴 ${red} та   🟡 ${yellow} та   🟢 ${green} та`,
-    "",
-    `📅 Ҳисобот санаси: ${fmtDate(bundle.import.reportGeneratedAt)}`,
-    `Маълумот даври: ${fmtDate(bundle.import.dataPeriodStart)} — ${fmtDate(bundle.import.dataPeriodEnd)}`
-  ].join("\n");
+async function sendReportFiles(chatId: number, out: ReportOutput): Promise<void> {
+  await sendDocument(chatId, out.excel, `${out.baseName}.xlsx`, "📥 Excel");
+  await sendDocument(chatId, out.pdf, `${out.baseName}.pdf`, "📊 PDF");
 }
 
-function todayShortSummary(bundle: ReportBundle): string {
-  const s = bundle.summary;
-  return [
-    "📊 ПАХТА ҚАБУЛИ — ҚИСҚА ХУЛОСА",
-    `📅 ${fmtDate(bundle.import.reportGeneratedAt)}`,
-    "",
-    `Шартнома: ${fmtTons(s.contractQtyKg)}`,
-    `Қабул: ${fmtTons(s.acceptedKg)}  (${s.achievementPct != null ? `${fmt(s.achievementPct)}%` : "—"})`,
-    `Бугунги қабул: ${fmtTons(s.todayAcceptedKg)}`,
-    `Қолдиқ: ${fmtTons(s.remainingKg)}`
-  ].join("\n");
-}
-
-async function sendReportPackage(chatId: number, telegramId: string, importId: number): Promise<void> {
-  await sendMessage(chatId, "📄 PDF тайёрланмоқда...\n📊 XLSX тайёрланмоқда...\n🌐 Web Dashboard тайёрланмоқда...");
-
-  const pkg = await generateReportPackage(importId, siteUrl(), `telegram:${telegramId}`);
-  if (!pkg) {
-    await sendMessage(chatId, "❌ Ҳисоботни тайёрлашда кутилмаган хато юз берди.");
+/** Every failure gets a specific reason; stack traces go to the server log only. */
+async function reportFailure(c: Chat, err: unknown, ref: string): Promise<void> {
+  if (err instanceof UserFacingError) {
+    await sendMessage(c.chatId, V.errorText(err.message, err.details));
     return;
   }
-
-  await sendMessage(chatId, finalSummaryText(pkg.bundle), [
-    [{ text: "🌐 WEB DASHBOARD", url: pkg.webUrl }]
-  ]);
-  await sendMessage(chatId, ["🔐 Dashboard пароли:", pkg.webPassword, "⏳ Амал қилиш муддати: 1 соат"].join("\n"));
-  await sendDocument(chatId, pkg.pdf, `Hazorasp_Textil_Paxta_Qabuli_Report_${pkg.bundle.import.dataPeriodEnd ?? "report"}.pdf`, "📄 PDF ҲИСОБОТ");
-  await sendDocument(chatId, pkg.xlsx, `Hazorasp_Textil_Paxta_Qabuli_Report_${pkg.bundle.import.dataPeriodEnd ?? "report"}.xlsx`, "📊 XLSX ҲИСОБОТ");
-
-  logAudit("REPORT_PACKAGE_SENT", { telegramId }, { importId });
+  console.error(`PTZ kunlik: unexpected error [${ref}]`, err);
+  await sendMessage(
+    c.chatId,
+    V.errorText(`Кутилмаган ички хато (${err instanceof Error ? err.name : "Error"}). Администраторга хабар берилди, мурожаат коди: ${ref}.`, [])
+  );
 }
 
-const HELP_TEXT = [
-  "Пахта қабули аналитика боти буйруқлари:",
-  "/report — охирги ҳисоботни қайта юбориш",
-  "/today — бугунги қисқа хулоса",
-  "/history — сўнгги импортлар рўйхати",
-  "/dashboard — янги вақтинчалик dashboard ҳаволаси",
-  "/reprocess — охирги импортни сақланган асл файлдан қайта таҳлил қилиш (фақат админ)",
-  "/settings — жорий созламалар (фақат админ)",
-  "",
-  "Excel файлни шу ботга юборсангиз, автоматик таҳлил қилинади."
-].join("\n");
+async function processSession(c: Chat, session: UploadSession): Promise<void> {
+  if (!claimForProcessing(session)) return; // another update already started it
+  const progressId = await sendMessage(c.chatId, V.progressText(null));
+  let lastEdit = 0;
+  try {
+    const out = await processBatch(sessionInputFiles(session), {
+      trigger: "telegram",
+      sessionId: session.id,
+      userId: c.telegramId,
+      onProgress: async (step) => {
+        if (!progressId || Date.now() - lastEdit < 700) return; // stay under Telegram's edit rate limit
+        lastEdit = Date.now();
+        await editMessageText(c.chatId, progressId, V.progressText(step));
+      }
+    });
+    if (progressId) await editMessageText(c.chatId, progressId, V.progressText("done"));
+    finishSession(session, "COMPLETED", { batchId: out.batchId });
+    await sendMessage(c.chatId, V.finalText(out), RESULT_BUTTONS);
+    await sendReportFiles(c.chatId, out);
+    logAudit("KUNLIK_REPORT_SENT", { telegramId: c.telegramId, username: c.username }, { batchId: out.batchId, sessionId: session.id, ms: out.processingMs });
+  } catch (err) {
+    if (err instanceof UserFacingError && err.source) {
+      // Keep the three good files; ask only for the one that failed.
+      const reopened = reopenWithout(session, err.source);
+      await reportFailure(c, err, session.id);
+      await sendMessage(c.chatId, [`🔁 ${SOURCE_LABELS[err.source]} файлини тузатиб, қайта юборинг.`, "", V.checklist(reopened)].join("\n"));
+    } else {
+      finishSession(session, "ERROR", { error: err instanceof Error ? `${err.name}: ${err.message}` : String(err) });
+      await reportFailure(c, err, session.id);
+    }
+  }
+}
 
-async function handleDocument(
-  chatId: number,
-  telegramId: string,
-  username: string | null,
-  document: NonNullable<NonNullable<TelegramUpdate["message"]>["document"]>,
-  messageDate: number
-): Promise<void> {
-  const filename = document.file_name ?? "report.xlsx";
-  const isXlsx =
-    filename.toLowerCase().endsWith(".xlsx") ||
-    document.mime_type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+async function acceptFile(c: Chat, session: UploadSession, type: SourceType, filename: string, buffer: Buffer): Promise<void> {
+  const { session: s, replaced } = addFile(session, type, filename, buffer);
+  logAudit("KUNLIK_FILE_RECEIVED", { telegramId: c.telegramId, username: c.username }, { sessionId: s.id, type, filename });
+  await sendMessage(c.chatId, V.acceptedText(s, type, replaced));
+  if (isComplete(s)) await processSession(c, s);
+}
 
+async function handleDocument(c: Chat, document: NonNullable<NonNullable<TelegramUpdate["message"]>["document"]>): Promise<void> {
+  const filename = document.file_name ?? "file.xlsx";
+  const isXlsx = /\.xlsx$/i.test(filename) || document.mime_type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
   if (!isXlsx) {
-    await sendMessage(chatId, "❌ Фақат .xlsx форматидаги файллар қабул қилинади.");
+    await sendMessage(c.chatId, "❌ Фақат .xlsx форматидаги файллар қабул қилинади.");
     return;
   }
-  if ((document.file_size ?? 0) > 20 * 1024 * 1024) {
-    await sendMessage(chatId, "❌ Файл ҳажми 20MB дан катта. Telegram bot API бундай файлни юклаб бера олмайди.");
+  if ((document.file_size ?? 0) > MAX_UPLOAD_BYTES) {
+    await sendMessage(c.chatId, "❌ Файл ҳажми 20MB дан катта — Telegram bot API уни юклаб бера олмайди.");
     return;
   }
-
-  await sendMessage(chatId, "📊 Файл қабул қилинди.\n\nМаълумотлар текширилмоқда...");
+  if (isProcessing(c.telegramId)) {
+    await sendMessage(c.chatId, "⏳ Олдинги ҳисобот ҳали тайёрланмоқда. Тугагач, янги файлларни юборинг.");
+    return;
+  }
 
   let buffer: Buffer;
   try {
     buffer = await downloadTelegramFile(document.file_id);
   } catch (err) {
-    await sendMessage(chatId, "❌ Файлни юклаб олишда хато юз берди.");
     console.error("PTZ bot: file download failed", err);
+    await sendMessage(c.chatId, "❌ Файлни Telegram'дан юклаб олиб бўлмади. Қайта юбориб кўринг.");
     return;
   }
 
-  await sendMessage(chatId, "🔄 Excel таҳлил қилинмоқда...\n📈 Кўрсаткичлар ҳисобланмоқда...");
-
-  const outcome = await importExcelReport(buffer, filename, new Date(messageDate * 1000), { telegramId, username });
-
-  if (outcome.status === "duplicate") {
-    await sendMessage(chatId, "ℹ️ Бу файл аллақачон юкланган (байт-байтгача бир хил). Қайта ишланмади.");
+  const session = getOrStartSession(c.telegramId, String(c.chatId));
+  const cls = await classifyFile(filename, buffer);
+  if (!cls) {
+    setPending(session, filename, buffer);
+    await sendMessage(c.chatId, V.ASK_TYPE_TEXT, TYPE_BUTTONS);
     return;
   }
-
-  if (outcome.status === "failed") {
-    const errors = outcome.warnings.filter((w) => w.severity === "ERROR");
-    await sendMessage(
-      chatId,
-      [
-        "❌ Ҳисобот яратишда хатолик юз берди.",
-        "",
-        "Муаммо:",
-        ...errors.slice(0, 5).map((e) => `• ${e.message}`)
-      ].join("\n")
-    );
-    return;
-  }
-
-  if (outcome.status === "partial") {
-    const errors = outcome.warnings.filter((w) => w.severity === "ERROR").length;
-    const warns = outcome.warnings.filter((w) => w.severity === "WARNING").length;
-    await sendMessage(
-      chatId,
-      `⚠️ Импорт қисман муваффақиятли якунланди (${errors} хато, ${warns} огоҳлантириш). Текширилган маълумотлар билан давом этилмоқда.\n\nҚаторлар: ${outcome.rowCount} (яроқли: ${outcome.validRowCount})`
-    );
-  }
-
-  await sendReportPackage(chatId, telegramId, outcome.importId);
+  await acceptFile(c, session, cls.type, filename, buffer);
 }
 
-async function handleCommand(chatId: number, telegramId: string, role: "admin" | "uploader", command: string): Promise<void> {
-  const base = command.split(/[@\s]/)[0];
+async function withLatest(c: Chat, fn: (out: ReportOutput) => Promise<void>): Promise<void> {
+  try {
+    const out = await buildLatestReport();
+    if (!out) {
+      await sendMessage(c.chatId, "Ҳозирча ҳисобот йўқ. 4 та файлни юборинг (/start).");
+      return;
+    }
+    await fn(out);
+  } catch (err) {
+    await reportFailure(c, err, `latest-${Date.now()}`);
+  }
+}
 
-  switch (base) {
+async function handleCommand(c: Chat, role: "admin" | "uploader", text: string): Promise<void> {
+  const [raw, ...args] = text.trim().split(/\s+/);
+  const command = (raw ?? "").split("@")[0];
+
+  switch (command) {
     case "/start":
+      startSession(c.telegramId, String(c.chatId));
+      await sendMessage(c.chatId, V.startText());
+      return;
     case "/help":
-      await sendMessage(chatId, HELP_TEXT);
+      await sendMessage(c.chatId, V.HELP_TEXT);
       return;
-
-    case "/report": {
-      const latest = getActiveImport();
-      if (!latest) {
-        await sendMessage(chatId, "Ҳозирча ҳеч қандай ҳисобот юкланмаган.");
-        return;
-      }
-      await sendReportPackage(chatId, telegramId, latest.id);
+    case "/cancel": {
+      const s = getOpenSession(c.telegramId);
+      if (s) finishSession(s, "ERROR", { error: "cancelled" });
+      await sendMessage(c.chatId, s ? "🗑 Жорий сессия бекор қилинди, юборилган файллар ўчирилди." : "Очиқ сессия йўқ.");
       return;
     }
-
-    case "/today": {
-      const latest = getActiveImport();
-      if (!latest) {
-        await sendMessage(chatId, "Ҳозирча ҳеч қандай ҳисобот юкланмаган.");
-        return;
-      }
-      const bundle = buildReportBundle(latest.id);
-      if (bundle) await sendMessage(chatId, todayShortSummary(bundle));
+    case "/report":
+      await withLatest(c, async (out) => {
+        await sendMessage(c.chatId, V.finalText(out), RESULT_BUTTONS);
+        await sendReportFiles(c.chatId, out);
+      });
       return;
-    }
-
-    case "/history": {
-      const imports = listAllImports(10);
-      if (imports.length === 0) {
-        await sendMessage(chatId, "Тарих бўш.");
-        return;
-      }
-      const lines = imports.map((i) => `${fmtDate(i.dataPeriodEnd)} — ${i.status} (${i.rowCount} қатор, ${i.warningCount} огоҳлантириш)${i.isActive ? " [фаол]" : ""}`);
-      await sendMessage(chatId, ["Сўнгги импортлар:", ...lines].join("\n"));
+    case "/today":
+      await withLatest(c, (out) => sendMessage(c.chatId, V.todayText(out)).then(() => undefined));
       return;
-    }
-
-    case "/dashboard": {
-      const latest = getActiveImport();
-      if (!latest) {
-        await sendMessage(chatId, "Ҳозирча ҳеч қандай ҳисобот юкланмаган.");
-        return;
-      }
-      const { createTempAccess } = await import("./tempAccess.ts");
-      const access = createTempAccess(latest.id, `telegram:${telegramId}`);
-      const link = `${siteUrl()}/ptz/report/${access.token}`;
-      await sendMessage(chatId, ["📊 PAXTA QABULI DASHBOARD", "", "🔐 Парол:", access.password, "", "⏳ Амал қилиш муддати:", "1 соат"].join("\n"), [
-        [{ text: "🌐 Dashboardni ochish", url: link }]
-      ]);
+    case "/farmers":
+      await withLatest(c, (out) => sendMessage(c.chatId, V.farmersText(out)).then(() => undefined));
       return;
-    }
-
-    case "/reprocess": {
-      if (role !== "admin") {
-        await sendMessage(chatId, "❌ Бу буйруқ фақат администраторлар учун.");
-        return;
-      }
-      const latest = getActiveImport();
-      if (!latest) {
-        await sendMessage(chatId, "Ҳозирча ҳеч қандай ҳисобот юкланмаган.");
-        return;
-      }
-      await sendMessage(chatId, "🔄 Ҳисобот сақланган асл файлдан қайта таҳлил қилинмоқда...");
-      const outcome = await reprocessImport(latest.id, { telegramId, username: null });
-      if (outcome.status === "failed") {
-        await sendMessage(chatId, ["❌ Қайта таҳлил қилиб бўлмади.", ...outcome.warnings.slice(0, 5).map((w) => `• ${w.message}`)].join("\n"));
-        return;
-      }
-      await sendMessage(chatId, `✅ Қайта таҳлил тугади: ${outcome.rowCount} қатор, ${outcome.warnings.length} огоҳлантириш.`);
-      await sendReportPackage(chatId, telegramId, outcome.importId);
+    case "/payments":
+      await withLatest(c, (out) => sendMessage(c.chatId, V.paymentsText(out)).then(() => undefined));
       return;
-    }
-
-    case "/settings": {
-      if (role !== "admin") {
-        await sendMessage(chatId, "❌ Бу буйруқ фақат администраторлар учун.");
-        return;
+    case "/shipments":
+      await withLatest(c, (out) => sendMessage(c.chatId, V.shipmentsText(out)).then(() => undefined));
+      return;
+    case "/status": {
+      const batch = latestCompletedBatch();
+      let out: ReportOutput | null = null;
+      try {
+        out = batch ? await buildLatestReport() : null;
+      } catch (err) {
+        console.error("PTZ kunlik: /status could not rebuild the latest report", err);
       }
-      const settings = getAllSettings();
-      const users = listTelegramUsers();
       await sendMessage(
-        chatId,
-        ["Жорий созламалар:", ...Object.entries(settings).map(([k, v]) => `${k} = ${v}`), "", `Рухсат берилган фойдаланувчилар: ${users.length}`].join("\n")
+        c.chatId,
+        V.statusText({ batch, files: batch ? currentFiles(batch.id) : {}, out, session: getOpenSession(c.telegramId), refreshMinutes: getRefreshIntervalMinutes() })
       );
       return;
     }
-
+    case "/settings": {
+      if (role !== "admin") {
+        await sendMessage(c.chatId, "❌ Бу буйруқ фақат администраторлар учун.");
+        return;
+      }
+      if (args[0] === "refresh" && args[1]) {
+        try {
+          setRefreshIntervalMinutes(Number(args[1]));
+          logAudit("KUNLIK_SETTING_CHANGED", { telegramId: c.telegramId, username: c.username }, { refresh_interval_minutes: Number(args[1]) });
+          await sendMessage(c.chatId, `✅ Автоматик янгиланиш интервали: ${args[1]} дақиқа.`);
+        } catch {
+          await sendMessage(c.chatId, "❌ Рухсат этилган қийматлар: 30 ёки 60. Мисол: /settings refresh 30");
+        }
+        return;
+      }
+      const settings = getAllSettings();
+      await sendMessage(
+        c.chatId,
+        [
+          "⚙️ Созламалар:",
+          ...Object.entries(settings).map(([k, v]) => `${k} = ${v}`),
+          `refresh_interval_minutes = ${getRefreshIntervalMinutes()}`,
+          "",
+          `Рухсат берилган фойдаланувчилар: ${listTelegramUsers().length}`,
+          "",
+          "Ўзгартириш: /settings refresh 30|60"
+        ].join("\n")
+      );
+      return;
+    }
     default:
-      await sendMessage(chatId, "Номаълум буйруқ. /help ни синаб кўринг.");
+      await sendMessage(c.chatId, "Номаълум буйруқ. /help ни синаб кўринг.");
   }
 }
 
+async function handleCallback(c: Chat, cq: NonNullable<TelegramUpdate["callback_query"]>): Promise<void> {
+  const data = cq.data ?? "";
+  if (data.startsWith("kt:type:")) {
+    const type = data.slice("kt:type:".length) as SourceType;
+    const session = getOpenSession(c.telegramId);
+    const resolved = session && SOURCE_TYPES.includes(type) ? resolvePending(session, type) : null;
+    await answerCallbackQuery(cq.id, resolved ? SOURCE_LABELS[type] : "Файл топилмади — қайта юборинг.");
+    if (!resolved) return;
+    logAudit("KUNLIK_FILE_RECEIVED", { telegramId: c.telegramId, username: c.username }, { sessionId: resolved.session.id, type, filename: resolved.filename, classifiedBy: "user" });
+    await sendMessage(c.chatId, V.acceptedText(resolved.session, type, resolved.replaced));
+    if (isComplete(resolved.session)) await processSession(c, resolved.session);
+    return;
+  }
+  if (data === "kt:detail") {
+    await answerCallbackQuery(cq.id);
+    await withLatest(c, (out) => sendMessage(c.chatId, V.detailText(out)).then(() => undefined));
+    return;
+  }
+  await answerCallbackQuery(cq.id);
+}
+
 export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void> {
-  const message = update.message;
-  if (!message?.from || message.from.is_bot) return;
+  cleanupExpiredSessions();
+  const from = update.message?.from ?? update.callback_query?.from;
+  const chatId = update.message?.chat.id ?? update.callback_query?.message?.chat.id;
+  if (!from || from.is_bot || chatId == null) return;
+  const c: Chat = { chatId, telegramId: String(from.id), username: from.username ?? null };
 
-  const chatId = message.chat.id;
-  const telegramId = String(message.from.id);
-  const username = message.from.username ?? null;
-
-  const user = getAuthorizedUser(telegramId);
+  const user = getAuthorizedUser(c.telegramId);
   if (!user) {
-    logAudit("UNAUTHORIZED_ACCESS_ATTEMPT", { telegramId, username }, { text: message.text ?? "[document]" });
+    logAudit("UNAUTHORIZED_ACCESS_ATTEMPT", { telegramId: c.telegramId, username: c.username }, { text: update.message?.text ?? (update.callback_query ? "[callback]" : "[document]") });
+    if (update.callback_query) await answerCallbackQuery(update.callback_query.id);
     await sendMessage(chatId, "⛔ Сизда ушбу ботдан фойдаланиш ҳуқуқи йўқ. Администратор билан боғланинг.");
     return;
   }
 
-  if (message.document) {
-    await handleDocument(chatId, telegramId, username, message.document, message.date);
+  if (update.callback_query) {
+    await handleCallback(c, update.callback_query);
     return;
   }
-
-  if (message.text?.startsWith("/")) {
-    await handleCommand(chatId, telegramId, user.role, message.text);
+  const message = update.message!;
+  if (message.document) {
+    await handleDocument(c, message.document);
+    return;
   }
+  if (message.text?.startsWith("/")) await handleCommand(c, user.role, message.text);
 }
 
 export { addTelegramUser, removeTelegramUser, isAdmin };

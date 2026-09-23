@@ -227,3 +227,10 @@ Same caveats as §5 apply (no LLM mapping fallback, single-process SQLite, no se
 carried over from this rewrite: quality thresholds and the contract-quantity unit are unconfirmed
 assumptions (see table above) — do not silently "fix" them without checking with the client first; the
 generated reports already say so explicitly, which is the intended behavior, not a bug to clean up.
+
+## 10. 2026-09-23: Кунлик терим (4-file report) replaces the Telegram flow
+
+The Telegram bot now collects four exports (basket, Историческая выписка, Мои лицевые счета в РКП,
+Shipments) per user session and returns the Кунлик терим Excel + PDF. The single-file "Пахта қабули"
+package described in §9 is no longer sent from Telegram (business decision); its code still serves
+`/admin/ptz` and the web dashboard. Design, data model and runbook: `docs/kunlik-terim/`.

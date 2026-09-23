@@ -11,7 +11,9 @@
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-strip-types --test __tests__/ptz/*.test.mts",
     "ptz:set-webhook": "node scripts/ptz-set-webhook.mjs",
-    "ptz:reset": "node --experimental-strip-types scripts/ptz-reset.mts"
+    "ptz:reset": "node --experimental-strip-types scripts/ptz-reset.mts",
+    "ptz:kunlik": "node --experimental-strip-types scripts/ptz-kunlik.mts",
+    "ptz:seed-directory": "node --experimental-strip-types scripts/ptz-seed-directory.mts"
   },
   "dependencies": {
     "@svg-maps/uzbekistan": "^2.0.0",

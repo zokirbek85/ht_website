@@ -6,13 +6,14 @@ function botToken(): string {
   return t;
 }
 
-export type InlineKeyboardButton = { text: string; url: string };
+export type InlineKeyboardButton = { text: string; url: string } | { text: string; callback_data: string };
 
+/** Sends a message; resolves to its message_id (for later edits), or null if Telegram rejected it. */
 export async function sendMessage(
   chatId: string | number,
   text: string,
   buttons?: InlineKeyboardButton[][]
-): Promise<void> {
+): Promise<number | null> {
   const res = await fetch(`${API_BASE}/bot${botToken()}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -25,7 +26,28 @@ export async function sendMessage(
   });
   if (!res.ok) {
     console.error("PTZ bot sendMessage failed:", res.status, await res.text());
+    return null;
   }
+  const body = (await res.json()) as { result?: { message_id?: number } };
+  return body.result?.message_id ?? null;
+}
+
+export async function editMessageText(chatId: string | number, messageId: number, text: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/bot${botToken()}/editMessageText`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id: chatId, message_id: messageId, text, disable_web_page_preview: true })
+  });
+  if (!res.ok) console.error("PTZ bot editMessageText failed:", res.status, await res.text());
+}
+
+export async function answerCallbackQuery(callbackQueryId: string, text?: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/bot${botToken()}/answerCallbackQuery`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ callback_query_id: callbackQueryId, ...(text ? { text } : {}) })
+  });
+  if (!res.ok) console.error("PTZ bot answerCallbackQuery failed:", res.status, await res.text());
 }
 
 export async function sendDocument(chatId: string | number, buffer: Buffer, filename: string, caption?: string): Promise<void> {
@@ -62,5 +84,11 @@ export type TelegramUpdate = {
     from?: { id: number; username?: string; is_bot?: boolean };
     text?: string;
     document?: { file_id: string; file_name?: string; mime_type?: string; file_size?: number };
+  };
+  callback_query?: {
+    id: string;
+    from: { id: number; username?: string; is_bot?: boolean };
+    message?: { message_id: number; chat: { id: number } };
+    data?: string;
   };
 };

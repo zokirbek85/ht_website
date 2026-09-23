@@ -66,6 +66,18 @@ The SQLite database, uploaded Excel files and generated PDFs live under `data/pt
 (see `.gitignore`) so `git reset --hard` on every deploy never touches them, but **make sure your VPS
 backup job includes `/var/www/hazorasp-textil/data/ptz/`** — it is the only copy of the import history.
 
+### Кунлик терим report (4-file flow)
+
+See `docs/kunlik-terim/README.md`. One-time step after deploying: seed the ҳудуд directory from the
+latest hand-made report and a matching basket export, then review the generated file:
+
+```bash
+npm run ptz:seed-directory -- "/path/Кунлик терим.xlsx" "/path/basket_….xlsx"
+# → data/ptz/farmer_directory.xlsx (INNs, ҳудуд blocks, display names; keep it with the DB backups)
+```
+
+Without it the report still works, but every farmer lands in "Ҳудуди аниқланмаган".
+
 ## GitHub Actions SSH access
 
 Create a dedicated Ed25519 key locally without a passphrase for the deploy automation:

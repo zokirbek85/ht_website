@@ -11,6 +11,11 @@ npm run dev
 
 Open http://localhost:3000 — redirects to `/en`. Switch language from the header/footer switcher, or visit `/ru` / `/uz` directly.
 
+## PTZ Telegram bot — Кунлик терим
+
+The `/api/ptz-bot` Telegram bot builds the daily harvest report (Excel + PDF) from four source exports.
+Runbook and design: [docs/kunlik-terim/README.md](docs/kunlik-terim/README.md).
+
 ## Structure
 
 - `src/app/[locale]/` — routes (one per site section, see below), all localized

@@ -11,3 +11,10 @@ next-env.d.ts
 # Must stay untracked so `git reset --hard` on deploy never wipes it.
 data/ptz/*
 !data/ptz/.gitkeep
+
+# Кунлик терим: source exports hold INNs and payment data — never commit them.
+.env
+*.xlsx
+*.xls
+/tmp/
+/media/
