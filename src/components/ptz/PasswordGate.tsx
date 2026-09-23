@@ -4,10 +4,12 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { unlockReport, type UnlockState } from "@/app/ptz/report/[token]/actions";
 
+type UnlockAction = (token: string, prev: UnlockState, formData: FormData) => Promise<UnlockState>;
+
 const initialState: UnlockState = {};
 
-export function PasswordGate({ token }: { token: string }) {
-  const boundAction = unlockReport.bind(null, token);
+export function PasswordGate({ token, unlock = unlockReport, title = "PTZ Analytics" }: { token: string; unlock?: UnlockAction; title?: string }) {
+  const boundAction = unlock.bind(null, token);
   const [state, formAction] = useActionState(boundAction, initialState);
 
   return (
@@ -16,7 +18,7 @@ export function PasswordGate({ token }: { token: string }) {
       style={{ background: "var(--surface-dark)" }}
     >
       <form action={formAction} className="w-full max-w-sm rounded-m border border-[var(--surface-dark-border)] bg-white/[0.04] p-8 backdrop-blur-md">
-        <div className="eyebrow">PTZ Analytics</div>
+        <div className="eyebrow">{title}</div>
         <h1 className="heading-natural mt-2 font-display text-lg font-semibold text-white">Ҳисоботга кириш</h1>
         <p className="mt-2 text-sm text-[var(--surface-dark-text-soft)]">Давом этиш учун паролни киритинг.</p>
 

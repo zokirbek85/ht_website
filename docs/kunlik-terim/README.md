@@ -34,7 +34,7 @@ CLI / future scheduler (refresh.ts) ───────────┼─► s
 
 ```bash
 npm ci                                   # Node ≥ 22.5 (node:sqlite)
-npm test                                 # 61 tests; the real-data test is skipped unless KT_REAL_DIR is set
+npm test                                 # 62 tests; the real-data test is skipped unless KT_REAL_DIR is set
 KT_REAL_DIR=/path/to/exports npm test    # also run the real-data regression test
 
 # One-time: seed the ҳудуд directory from the hand-made report + a basket export.
@@ -53,8 +53,15 @@ Send the four files in any order. Type detection is by filename, then by content
 asks with buttons. When all four have arrived, the bot shows a progress screen, then the summary plus
 Excel and PDF. If one file is bad, only that file is requested again.
 
-Commands: `/start` (new session), `/help`, `/report`, `/today`, `/farmers`, `/payments`, `/shipments`,
-`/status`, `/cancel`, `/settings` (admin; `/settings refresh 30|60`).
+Every report also comes with a **temporary web dashboard**: a `🌐 WEB DASHBOARD` button to
+`/ptz/terim/<token>` plus a separate 8-character password. The link lives for 60 minutes (setting
+`temp_link_ttl_minutes`), and it uses the same scrypt/token/cookie mechanism as the old `/ptz/report` link
+(tables `kt_temp_access`, `kt_temp_access_log`). The page shows the report as of that batch: an overview
+with charts, a searchable farmer table, payments and RKP, shipments, and Data Quality.
+
+Commands: `/start` (new session), `/help`, `/report`, `/dashboard` (new web link for the latest report),
+`/today`, `/farmers`, `/payments`, `/shipments`, `/status`, `/cancel`, `/settings` (admin;
+`/settings refresh 30|60`).
 
 ## Configuration
 

@@ -199,12 +199,17 @@ function fileMeta(row: ImportFileRow | undefined): { issues: DataIssue[]; inFile
   return { issues: m.issues ?? [], inFileDuplicates: m.inFileDuplicates ?? [], reportGeneratedAt: m.reportGeneratedAt ?? null };
 }
 
-/** Builds the report from the stored state as of `batchId` (every source's latest import up to that batch). */
-export async function buildReport(
+export type ReportData = ExportContext;
+
+/**
+ * Computes the report from the stored state as of `batchId` (every source's
+ * latest import up to that batch) without rendering files — used by the web
+ * dashboard and as the first half of buildReport().
+ */
+export async function buildReportData(
   batchId: number,
-  opts: { now?: Date; directory?: DirectoryEntry[]; onProgress?: ProcessOptions["onProgress"]; started?: number } = {}
-): Promise<ReportOutput> {
-  const started = opts.started ?? performance.now();
+  opts: { now?: Date; directory?: DirectoryEntry[]; onProgress?: ProcessOptions["onProgress"] } = {}
+): Promise<ReportData> {
   const db = kdb();
   const basketBatch = latestBatchWithFile(db, "BASKET", batchId + 1);
   if (basketBatch == null) throw new UserFacingError("Ҳали битта ҳам basket файли юкланмаган — ҳисобот тузиб бўлмайди.");
@@ -227,9 +232,9 @@ export async function buildReport(
   const report = calculate({
     harvest,
     counted: validation.counted,
-    payments: loadPayments(),
+    payments: loadPayments(batchId),
     accounts: loadAccounts(accountsBatch),
-    shipments: loadShipments(),
+    shipments: loadShipments(batchId),
     directory,
     reportDate,
     generatedAt: nowT.iso,
@@ -261,11 +266,22 @@ export async function buildReport(
     .filter((f): f is ImportFileRow => !!f)
     .map((f) => ({ type: f.file_type, filename: f.filename, rows: f.rows, inserted: f.inserted, updated: f.updated, duplicates: f.duplicates, errors: f.errors, warnings: f.warnings }));
 
+  return { report, issues, dq, files: fileStats, batchId };
+}
+
+/** Builds the report as of `batchId` and renders the Excel and PDF files. */
+export async function buildReport(
+  batchId: number,
+  opts: { now?: Date; directory?: DirectoryEntry[]; onProgress?: ProcessOptions["onProgress"]; started?: number } = {}
+): Promise<ReportOutput> {
+  const started = opts.started ?? performance.now();
+  const ctx = await buildReportData(batchId, opts);
+  const { report, issues, dq, files: fileStats } = ctx;
+
   const sameDay = countCompletedForDate(report.reportDate, batchId);
   const baseName = `Кунлик_терим_${report.reportDate}${sameDay > 0 ? `_${report.generatedAt.slice(11, 16).replace(":", "-")}` : ""}`;
 
   await opts.onProgress?.("excel");
-  const ctx = { report, issues, dq, files: fileStats, batchId };
   const excel = await exportExcel(ctx);
   await opts.onProgress?.("pdf");
   const pdf = await exportPdf(ctx);

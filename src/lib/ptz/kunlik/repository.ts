@@ -166,6 +166,23 @@ CREATE TABLE IF NOT EXISTS kt_upload_sessions (
 );
 CREATE INDEX IF NOT EXISTS idx_kt_sessions_user ON kt_upload_sessions(user_id, status);
 
+CREATE TABLE IF NOT EXISTS kt_temp_access (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  token_hash TEXT NOT NULL UNIQUE,
+  batch_id INTEGER NOT NULL REFERENCES kt_import_batches(id),
+  password_hash TEXT NOT NULL,
+  password_salt TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  created_for TEXT
+);
+CREATE TABLE IF NOT EXISTS kt_temp_access_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  temp_access_id INTEGER NOT NULL REFERENCES kt_temp_access(id),
+  ts TEXT NOT NULL,
+  success INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS kt_processing_log (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   ts TEXT NOT NULL,
@@ -501,8 +518,11 @@ function mapHarvest(r: Record<string, unknown>): HarvestRecord {
   };
 }
 
-export function loadPayments(): PaymentRecord[] {
-  const rows = kdb().prepare("SELECT * FROM kt_payments ORDER BY op_datetime, id").all() as Record<string, unknown>[];
+/** Payments known as of `asOfBatchId` (all of them when omitted). */
+export function loadPayments(asOfBatchId?: number): PaymentRecord[] {
+  const rows = kdb()
+    .prepare(`SELECT * FROM kt_payments ${asOfBatchId != null ? "WHERE first_batch_id <= ?" : ""} ORDER BY op_datetime, id`)
+    .all(...(asOfBatchId != null ? [asOfBatchId] : [])) as Record<string, unknown>[];
   return rows.map((r) => ({
     naturalKey: r.natural_key as string,
     fingerprint: r.fingerprint as string,
@@ -544,8 +564,11 @@ export function loadAccounts(accountsBatchId: number | null): RkpAccountRecord[]
   }));
 }
 
-export function loadShipments(): ShipmentRecord[] {
-  const rows = kdb().prepare("SELECT * FROM kt_shipments ORDER BY deal_number, document_date, id").all() as Record<string, unknown>[];
+/** Shipments known as of `asOfBatchId` (all of them when omitted). */
+export function loadShipments(asOfBatchId?: number): ShipmentRecord[] {
+  const rows = kdb()
+    .prepare(`SELECT * FROM kt_shipments ${asOfBatchId != null ? "WHERE first_batch_id <= ?" : ""} ORDER BY deal_number, document_date, id`)
+    .all(...(asOfBatchId != null ? [asOfBatchId] : [])) as Record<string, unknown>[];
   return rows.map((r) => ({
     naturalKey: r.natural_key as string,
     fingerprint: r.fingerprint as string,

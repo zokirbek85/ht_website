@@ -201,6 +201,10 @@ export function statusText(p: {
   return lines.join("\n");
 }
 
+export function dashboardLinkText(password: string, ttlMinutes: number): string {
+  return ["🌐 КУНЛИК ТЕРИМ — WEB DASHBOARD", "", "🔐 Парол:", password, "", `⏳ Амал қилиш муддати: ${ttlMinutes >= 60 && ttlMinutes % 60 === 0 ? `${ttlMinutes / 60} соат` : `${ttlMinutes} дақиқа`}`].join("\n");
+}
+
 export function errorText(message: string, details: string[]): string {
   const shown = details.slice(0, 40);
   return [
@@ -224,6 +228,7 @@ export const HELP_TEXT = [
   "",
   "/start — янги ҳисобот сессиясини бошлаш",
   "/report — охирги ҳисоботни (Excel + PDF) қайта юбориш",
+  "/dashboard — янги вақтинчалик web dashboard ҳаволаси",
   "/today — бугунги қисқа хулоса",
   "/farmers — бугун топширган фермерлар",
   "/payments — тўловлар ва РКП қолдиқлари",

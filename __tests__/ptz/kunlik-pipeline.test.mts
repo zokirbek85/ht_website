@@ -180,3 +180,29 @@ test("every run is logged per file with row/insert/update/duplicate counts", () 
   assert.ok(rows.length >= 8);
   assert.deepEqual([...new Set(rows.map((r) => r.file_type))].sort(), ["ACCOUNTS", "BASKET", "PAYMENTS", "SHIPMENTS"]);
 });
+
+test("temporary web dashboard link: password-protected, expires, and serves plain JSON for the report batch", async () => {
+  const { createKunlikTempAccess, checkKunlikTempAccess, getKunlikTempAccessRecord } = await import("../../src/lib/ptz/tempAccess.ts");
+  const { setSetting } = await import("../../src/lib/ptz/settings.ts");
+  const { buildReportData } = await import("../../src/lib/ptz/kunlik/service.ts");
+  const { toWebView } = await import("../../src/lib/ptz/kunlik/webView.ts");
+  const { latestCompletedBatch } = await import("../../src/lib/ptz/kunlik/repository.ts");
+
+  const batchId = latestCompletedBatch()!.id;
+  const access = createKunlikTempAccess(batchId, "telegram:1");
+  assert.match(access.password, /^[2-9A-HJ-NP-Z]{8}$/);
+  assert.deepEqual(checkKunlikTempAccess(access.token, access.password), { ok: true, batchId });
+  assert.deepEqual(checkKunlikTempAccess(access.token, "WRONGPWD"), { ok: false, reason: "wrong_password" });
+  assert.deepEqual(checkKunlikTempAccess("nope", access.password), { ok: false, reason: "not_found" });
+
+  const view = toWebView(await buildReportData(batchId), getKunlikTempAccessRecord(access.token)!.expiresAt);
+  const json = JSON.parse(JSON.stringify(view)); // throws on bigint
+  assert.equal(json.kpi.seasonTotalT, 44.188); // latest batch (Test 12) re-sent the original basket
+  assert.equal(json.reportDate, "2026-09-23");
+
+  setSetting("temp_link_ttl_minutes", "-1");
+  const expired = createKunlikTempAccess(batchId, null);
+  assert.deepEqual(checkKunlikTempAccess(expired.token, expired.password), { ok: false, reason: "expired" });
+  assert.equal(getKunlikTempAccessRecord(expired.token)!.expired, true);
+  setSetting("temp_link_ttl_minutes", "60");
+});

@@ -8,7 +8,8 @@
 import { logAudit } from "./audit.ts";
 import { answerCallbackQuery, downloadTelegramFile, editMessageText, sendDocument, sendMessage, type InlineKeyboardButton, type TelegramUpdate } from "./telegram.ts";
 import { addTelegramUser, getAuthorizedUser, isAdmin, removeTelegramUser, listTelegramUsers } from "./telegramUsers.ts";
-import { getAllSettings } from "./settings.ts";
+import { getAllSettings, getTempLinkTtlMinutes } from "./settings.ts";
+import { createKunlikTempAccess } from "./tempAccess.ts";
 import { classifyFile, SOURCE_LABELS } from "./kunlik/classifier.ts";
 import { MAX_UPLOAD_BYTES } from "./kunlik/config.ts";
 import { buildLatestReport, processBatch, type ReportOutput } from "./kunlik/service.ts";
@@ -37,6 +38,18 @@ type Chat = { chatId: number; telegramId: string; username: string | null };
 
 const TYPE_BUTTONS: InlineKeyboardButton[][] = SOURCE_TYPES.map((t) => [{ text: SOURCE_LABELS[t], callback_data: `kt:type:${t}` }]);
 const RESULT_BUTTONS: InlineKeyboardButton[][] = [[{ text: "🔎 Батафсил", callback_data: "kt:detail" }]];
+
+function siteUrl(): string {
+  return (process.env.NEXT_PUBLIC_SITE_URL ?? "https://hazorasp-textil.uz").replace(/\/$/, "");
+}
+
+/** Temporary password-protected web dashboard for one report batch (same mechanism as the old /ptz/report link). */
+async function sendDashboardLink(c: Chat, batchId: number): Promise<void> {
+  const access = createKunlikTempAccess(batchId, `telegram:${c.telegramId}`);
+  const url = `${siteUrl()}/ptz/terim/${access.token}`;
+  await sendMessage(c.chatId, V.dashboardLinkText(access.password, getTempLinkTtlMinutes()), [[{ text: "🌐 WEB DASHBOARD", url }]]);
+  logAudit("KUNLIK_DASHBOARD_LINK", { telegramId: c.telegramId, username: c.username }, { batchId });
+}
 
 async function sendReportFiles(chatId: number, out: ReportOutput): Promise<void> {
   await sendDocument(chatId, out.excel, `${out.baseName}.xlsx`, "📥 Excel");
@@ -75,6 +88,7 @@ async function processSession(c: Chat, session: UploadSession): Promise<void> {
     finishSession(session, "COMPLETED", { batchId: out.batchId });
     await sendMessage(c.chatId, V.finalText(out), RESULT_BUTTONS);
     await sendReportFiles(c.chatId, out);
+    await sendDashboardLink(c, out.batchId);
     logAudit("KUNLIK_REPORT_SENT", { telegramId: c.telegramId, username: c.username }, { batchId: out.batchId, sessionId: session.id, ms: out.processingMs });
   } catch (err) {
     if (err instanceof UserFacingError && err.source) {
@@ -166,8 +180,18 @@ async function handleCommand(c: Chat, role: "admin" | "uploader", text: string):
       await withLatest(c, async (out) => {
         await sendMessage(c.chatId, V.finalText(out), RESULT_BUTTONS);
         await sendReportFiles(c.chatId, out);
+        await sendDashboardLink(c, out.batchId);
       });
       return;
+    case "/dashboard": {
+      const latest = latestCompletedBatch();
+      if (!latest) {
+        await sendMessage(c.chatId, "Ҳозирча ҳисобот йўқ. 4 та файлни юборинг (/start).");
+        return;
+      }
+      await sendDashboardLink(c, latest.id);
+      return;
+    }
     case "/today":
       await withLatest(c, (out) => sendMessage(c.chatId, V.todayText(out)).then(() => undefined));
       return;

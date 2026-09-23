@@ -15,13 +15,14 @@ function cookieName(token: string): string {
   return `ptz_temp_${token}`;
 }
 
-export async function grantTempSession(token: string, expiresAt: string): Promise<void> {
+/** `basePath` scopes the cookie to one link: /ptz/report (Пахта қабули) or /ptz/terim (Кунлик терим). */
+export async function grantTempSession(token: string, expiresAt: string, basePath = "/ptz/report"): Promise<void> {
   const store = await cookies();
   store.set(cookieName(token), sign(token), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
-    path: `/ptz/report/${token}`,
+    path: `${basePath}/${token}`,
     expires: new Date(expiresAt)
   });
 }
