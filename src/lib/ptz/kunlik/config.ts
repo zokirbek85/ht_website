@@ -35,6 +35,14 @@ export const SHIPMENT_COUNTED_STATUSES: readonly string[] = ["ACTIVE"];
  */
 export const SHIPMENT_REMAINING_RULE_CONFIRMED = false;
 
+/**
+ * Режа counts only these contract types (matched case-insensitively on the
+ * basket "Шартнома тури"). Confirmed by the business 2026-09-23 and matches
+ * the hand-made report for 79 of 81 farmers: Forvard and Vaqtincha saqlash
+ * contracts are harvested and reported, but are not part of the plan.
+ */
+export const PLAN_CONTRACT_TYPES: readonly string[] = ["fyuchers", "фьючерс", "futures"];
+
 /** Minimum confidence for an automatic match; anything lower goes to manual review. */
 export const MATCH_MIN_CONFIDENCE = 0.8;
 

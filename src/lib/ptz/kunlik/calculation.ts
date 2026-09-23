@@ -10,8 +10,9 @@
 //   Утказилган маблаг    = Σ (Дебет − Кредит) of the farmer's statement legs
 //                          (Бир кунда = on the report date; Жами = all)
 //   Терим пули колдик    = 20 % − Утказилган (Жами)
-//   Режа                 = Σ distinct contracts' Шартнома миқдори (t)
-import { PICKING_MONEY_SHARE_PCT, SHIPMENT_COUNTED_STATUSES } from "./config.ts";
+//   Режа                 = Σ Шартнома миқдори (t) of the farmer's Fyuchers
+//                          contracts only (PLAN_CONTRACT_TYPES)
+import { PICKING_MONEY_SHARE_PCT, PLAN_CONTRACT_TYPES, SHIPMENT_COUNTED_STATUSES } from "./config.ts";
 import { FarmerIndex, buildOwnerClientCodes, rkpClientCode, type MatchMethod, type MatchResult } from "./matching.ts";
 import { UNASSIGNED_SECTION, type DirectoryEntry } from "./directory.ts";
 import { normalizeFarmerName } from "./utils/text.ts";
@@ -192,6 +193,11 @@ function aggregate(lines: Totals[]): Totals {
     t.farmerCount += l.farmerCount;
   }
   return t;
+}
+
+function isPlanContract(type: string | null): boolean {
+  const t = (type ?? "").trim().toLowerCase();
+  return PLAN_CONTRACT_TYPES.some((p) => t.includes(p));
 }
 
 function dateRange(from: IsoDate, to: IsoDate): IsoDate[] {
@@ -414,8 +420,9 @@ export function calculate(input: CalculationInput): KunlikReport {
       const today = acc.days.get(input.reportDate);
       if (today) addDay(t.today, today);
     }
-    const contractQtys = acc ? [...acc.contracts.values()].map((c) => c.qtyT) : [];
-    t.planT = acc && contractQtys.some((q) => q != null) ? roundKg(contractQtys.reduce<number>((a, q) => a + (q ?? 0), 0)) : (entry?.planT ?? 0);
+    // Farmers with basket contracts: Σ plan-type contracts (0 if they only have
+    // Forvard / Vaqtincha saqlash). Farmers not in the basket yet: directory plan.
+    t.planT = acc ? roundKg([...acc.contracts.values()].filter((c) => isPlanContract(c.type)).reduce((a, c) => a + (c.qtyT ?? 0), 0)) : (entry?.planT ?? 0);
     t.sum100 = t.total.handSum + t.total.machineSum;
     t.sum20 = percentOf(t.sum100, PICKING_MONEY_SHARE_PCT);
     t.paidTotal = inn ? (paidTotal.get(inn) ?? 0n) : 0n;
@@ -454,9 +461,8 @@ export function calculate(input: CalculationInput): KunlikReport {
     const link = inn ? linked.get(inn) : undefined;
     lines.push(buildLine({ key: inn ?? `dir:${entry.order}`, entry, acc, directoryMatch: link ? { method: link.method, confidence: link.confidence } : entry.inn ? { method: "NOT_IN_BASKET", confidence: null } : null }));
   }
-  // Режа keeps the existing module's rule (Σ distinct contract quantities);
-  // the hand-made report deviates for some multi-contract farmers, so every
-  // difference is surfaced rather than silently picking one (BUSINESS_RULE_REQUIRED).
+  // A directory plan that disagrees with the basket's Fyuchers contracts is
+  // usually a stale hand-entered number — surfaced so someone can fix it.
   for (const l of lines) {
     const entry = input.directory.find((e) => e.displayName === l.displayName && e.hudud === l.hudud);
     if (l.inn && entry?.planT != null && farmers.has(l.inn) && Math.abs(entry.planT - l.planT) > 0.001) {
@@ -465,7 +471,7 @@ export function calculate(input: CalculationInput): KunlikReport {
         code: "PLAN_DIFFERS_FROM_DIRECTORY",
         source: "REPORT",
         ref: `${l.displayName} (${l.contracts.join(", ")})`,
-        message: `Режа basket шартномалари бўйича ${l.planT} т, маълумотномада ${entry.planT} т. BUSINESS_RULE_REQUIRED: кўп шартномали фермер режаси қандай ҳисобланиши тасдиқлансин.`
+        message: `Режа basketдаги Fyuchers шартномалари бўйича ${l.planT} т, маълумотномада ${entry.planT} т — ҳисоботда ${l.planT} т ишлатилди; маълумотномадаги қийматни текширинг.`
       });
     }
   }

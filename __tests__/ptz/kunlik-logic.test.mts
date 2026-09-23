@@ -224,3 +224,19 @@ test("payments: company legs excluded, reversals netted, 20% and remainder exact
   assert.equal(l.pickingBalance, 643111600n - 900300000n);
   assert.equal(r.ownerLegs.count, 1);
 });
+
+test("Режа counts Fyuchers contracts only; Forvard / Vaqtincha saqlash harvest is still reported", () => {
+  const h = [
+    harvest({ inn: "7", farmerName: "AGROTEX MCHJ", contractNumber: "F1", contractType: "Fyuchers", contractQtyT: 1100, conditionedKg: 5000, recordNo: "1" }),
+    harvest({ inn: "7", farmerName: "AGROTEX MCHJ", contractNumber: "F2", contractType: "Fyuchers", contractQtyT: 55.892, conditionedKg: 1000, recordNo: "2" }),
+    harvest({ inn: "7", farmerName: "AGROTEX MCHJ", contractNumber: "W1", contractType: "Forvard", contractQtyT: 878.79, conditionedKg: 2000, recordNo: "3" }),
+    harvest({ inn: "8", farmerName: "UCHQUN MCHJ", contractNumber: "V1", contractType: "Vaqtincha saqlash", contractQtyT: 120, conditionedKg: 700, recordNo: "4" })
+  ];
+  const r = calc(h);
+  const agro = r.lines.find((l) => l.inn === "7")!;
+  assert.equal(agro.planT, 1155.892);
+  assert.equal(agro.total.handKg, 8000); // Forvard harvest included in totals
+  const uchqun = r.lines.find((l) => l.inn === "8")!;
+  assert.equal(uchqun.planT, 0);
+  assert.equal(uchqun.total.handKg, 700);
+});

@@ -78,7 +78,7 @@ Reproduced from the hand-made `Кунлик терим.xlsx` and verified agains
 | Терим учун утказилган маблаг — Жами | Σ (Дебет − Кредит) of the farmer's statement legs (reversals net out; the company's own block legs are excluded) |
 | … — Бир кунда | same, for operations on the report date |
 | Терим пули учун колдик | 20 % − Утказилган (Жами) |
-| Режа | Σ distinct contracts' `Шартнома миқдори` (t) — the existing module's rule |
+| Режа | Σ `Шартнома миқдори` (t) of the farmer's **Fyuchers** contracts only (`PLAN_CONTRACT_TYPES`). Forvard / Vaqtincha saqlash harvest is reported but not planned. Confirmed 2026-09-23; matches the hand-made report for 79/81 farmers |
 | Report date | Date in the basket's title banner (`… 23 September 14:09 …`), else the latest acceptance date |
 | Shipped kg | Σ `Кол-во отгрузки` of statuses in `SHIPMENT_COUNTED_STATUSES` (ACTIVE) per deal |
 
@@ -86,10 +86,10 @@ Money is exact `bigint` tiyin end to end; floats appear only when writing cells.
 
 ## BUSINESS_RULE_REQUIRED (open questions, not guessed)
 
-1. **Режа for multi-contract farmers.** The hand-made report differs from Σ contracts for 3 farmers,
-   in both directions (e.g. HAZORASP AGROTEX MCHJ: 5 contracts = 2 657.7 t in the basket vs 1 778.9 t
-   in the report). The system keeps Σ contracts and flags each difference as
-   `PLAN_DIFFERS_FROM_DIRECTORY`.
+1. ~~Режа for multi-contract farmers~~ — **resolved 2026-09-23**: Режа = Fyuchers contracts only
+   (e.g. HAZORASP AGROTEX MCHJ: 4 Fyuchers = 1 778.9 t; its 878.8 t Forvard contract is excluded).
+   The two remaining differences are hand-entered values in the old report: Сухроб Шахло (119.135 vs
+   93.899 t) surfaces as `PLAN_DIFFERS_FROM_DIRECTORY`; Искандар Шамоли had no plan in the old report.
 2. **"Кол-во сделки − Σ Кол-во отгрузки"** as a remainder. Not computed; both quantities are shown side by
    side (`SHIPMENT_REMAINING_RULE_CONFIRMED = false`).
 3. **Label vs meaning of "20 % / Терим пули".** The formula is reproduced exactly (20 % of 100 % minus
