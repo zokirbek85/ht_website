@@ -216,6 +216,33 @@ export function errorText(message: string, details: string[]): string {
   ].join("\n");
 }
 
+/** Bottom-keyboard buttons → the command each one runs. Labels are what Telegram sends back as text. */
+export const MENU_BUTTONS: Record<string, string> = {
+  "📊 Ҳисобот": "/report",
+  "🌐 Dashboard": "/dashboard",
+  "📅 Бугун": "/today",
+  "👨‍🌾 Фермерлар": "/farmers",
+  "💰 Тўловлар": "/payments",
+  "📦 Отгрузка": "/shipments",
+  "🆕 Янги ҳисобот": "/start",
+  "📡 Ҳолат": "/status",
+  "❓ Ёрдам": "/help",
+  "✖️ Бекор қилиш": "/cancel",
+  "⚙️ Созламалар": "/settings"
+};
+
+export function mainKeyboard(role: "admin" | "uploader"): { keyboard: string[][] } {
+  return {
+    keyboard: [
+      ["📊 Ҳисобот", "🌐 Dashboard"],
+      ["📅 Бугун", "👨‍🌾 Фермерлар"],
+      ["💰 Тўловлар", "📦 Отгрузка"],
+      ["🆕 Янги ҳисобот", "📡 Ҳолат"],
+      role === "admin" ? ["❓ Ёрдам", "✖️ Бекор қилиш", "⚙️ Созламалар"] : ["❓ Ёрдам", "✖️ Бекор қилиш"]
+    ]
+  };
+}
+
 export const HELP_TEXT = [
   "📊 Кунлик терим боти",
   "",
@@ -235,5 +262,7 @@ export const HELP_TEXT = [
   "/shipments — отгрузка",
   "/status — тизим ҳолати",
   "/cancel — жорий сессияни бекор қилиш",
-  "/settings — созламалар (админ)"
+  "/settings — созламалар (админ)",
+  "",
+  "Пастдаги тугмалар шу буйруқларни бажаради."
 ].join("\n");

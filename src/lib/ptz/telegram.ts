@@ -8,12 +8,23 @@ function botToken(): string {
 
 export type InlineKeyboardButton = { text: string; url: string } | { text: string; callback_data: string };
 
-/** Sends a message; resolves to its message_id (for later edits), or null if Telegram rejected it. */
+/** Persistent reply keyboard shown under the input field; each button sends its label as a text message. */
+export type ReplyKeyboard = { keyboard: string[][] };
+
+/**
+ * Sends a message; resolves to its message_id (for later edits), or null if Telegram rejected it.
+ * `buttons` are inline buttons under the message; a ReplyKeyboard replaces the chat's bottom keyboard.
+ */
 export async function sendMessage(
   chatId: string | number,
   text: string,
-  buttons?: InlineKeyboardButton[][]
+  buttons?: InlineKeyboardButton[][] | ReplyKeyboard
 ): Promise<number | null> {
+  const replyMarkup = !buttons
+    ? undefined
+    : Array.isArray(buttons)
+      ? { inline_keyboard: buttons }
+      : { keyboard: buttons.keyboard.map((row) => row.map((text) => ({ text }))), resize_keyboard: true, is_persistent: true };
   const res = await fetch(`${API_BASE}/bot${botToken()}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -21,7 +32,7 @@ export async function sendMessage(
       chat_id: chatId,
       text,
       disable_web_page_preview: true,
-      ...(buttons ? { reply_markup: { inline_keyboard: buttons } } : {})
+      ...(replyMarkup ? { reply_markup: replyMarkup } : {})
     })
   });
   if (!res.ok) {

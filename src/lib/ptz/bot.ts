@@ -165,10 +165,10 @@ async function handleCommand(c: Chat, role: "admin" | "uploader", text: string):
   switch (command) {
     case "/start":
       startSession(c.telegramId, String(c.chatId));
-      await sendMessage(c.chatId, V.startText());
+      await sendMessage(c.chatId, V.startText(), V.mainKeyboard(role));
       return;
     case "/help":
-      await sendMessage(c.chatId, V.HELP_TEXT);
+      await sendMessage(c.chatId, V.HELP_TEXT, V.mainKeyboard(role));
       return;
     case "/cancel": {
       const s = getOpenSession(c.telegramId);
@@ -298,7 +298,10 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<void
     await handleDocument(c, message.document);
     return;
   }
-  if (message.text?.startsWith("/")) await handleCommand(c, user.role, message.text);
+  const text = message.text?.trim();
+  const command = text ? (V.MENU_BUTTONS[text] ?? (text.startsWith("/") ? text : null)) : null;
+  if (command) await handleCommand(c, user.role, command);
+  else if (text) await sendMessage(c.chatId, "Пастдаги тугмалардан фойдаланинг ёки 4 та Excel файлни юборинг.", V.mainKeyboard(user.role));
 }
 
 export { addTelegramUser, removeTelegramUser, isAdmin };
